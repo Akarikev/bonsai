@@ -91,30 +91,78 @@ import {
   initTreeState,
   useTreeBonsai,
   set,
-  createMiddleware,
+  createLoggingMiddleware,
+  createValidationMiddleware,
 } from "@bonsai/state";
-
-// Create a validation middleware
-const validateAge = createMiddleware((path, nextValue) => {
-  if (path === "user/age" && nextValue < 0) {
-    return false; // Block update
-  }
-  return nextValue;
-});
 
 // Initialize with middleware
 initTreeState({
-  initialState: { user: { age: 0 } },
-  middleware: [validateAge],
+  initialState: {
+    user: {
+      name: "",
+      preferences: {
+        theme: "light",
+        notifications: true,
+      },
+    },
+  },
+  middleware: [
+    createLoggingMiddleware({ logPath: true, logValue: true }),
+    createValidationMiddleware((path, value) => {
+      if (
+        path === "user/name" &&
+        typeof value === "string" &&
+        value.length < 2
+      ) {
+        return "Name must be at least 2 characters long";
+      }
+      return true;
+    }),
+  ],
 });
 
-function AgeControl() {
-  const age = useTreeBonsai("user/age");
+function UserProfile() {
+  const name = useTreeBonsai("user/name");
+  const theme = useTreeBonsai("user/preferences/theme");
+
   return (
     <div>
-      <button onClick={() => set("user/age", age - 1)}>Decrease</button>
-      <span>{age}</span>
-      <button onClick={() => set("user/age", age + 1)}>Increase</button>
+      <input value={name} onChange={(e) => set("user/name", e.target.value)} />
+      <button
+        onClick={() =>
+          set("user/preferences/theme", theme === "light" ? "dark" : "light")
+        }
+      >
+        Toggle Theme
+      </button>
+    </div>
+  );
+}
+```
+
+### Flat State
+
+```tsx
+import { useBonsai, setState } from "@bonsai/state";
+
+function UserProfile() {
+  const name = useBonsai((state) => state.name || "");
+  const notifications = useBonsai((state) => state.notifications || false);
+
+  return (
+    <div>
+      <input
+        value={name}
+        onChange={(e) => setState({ name: e.target.value })}
+      />
+      <label>
+        <input
+          type="checkbox"
+          checked={notifications}
+          onChange={(e) => setState({ notifications: e.target.checked })}
+        />
+        Enable Notifications
+      </label>
     </div>
   );
 }
@@ -123,50 +171,34 @@ function AgeControl() {
 ### Scoped State
 
 ```tsx
-import { createStore, useStore } from "@bonsai/state";
+import { createBonsaiStore } from "@bonsai/state";
 
-function Counter() {
-  const store = createStore({ count: 0 });
-  const count = useStore(store, "count");
+// Create a scoped store
+const todoStatsStore = createBonsaiStore<{
+  totalCompleted: number;
+  totalPending: number;
+}>();
+
+function TodoStats() {
+  const stats = todoStatsStore.use((state) => state);
 
   return (
     <div>
-      <p>Count: {count}</p>
-      <button onClick={() => store.set("count", count + 1)}>Increment</button>
+      <p>Total Completed: {stats.totalCompleted || 0}</p>
+      <p>Total Pending: {stats.totalPending || 0}</p>
     </div>
   );
 }
-```
 
-### Flat State with Selectors
+// Update stats from tree state
+subscribe("todos", (todos) => {
+  if (!todos) return;
 
-```tsx
-import { createFlatStore, useFlatStore } from "@bonsai/state";
+  const totalCompleted = todos.filter((todo) => todo.completed).length;
+  const totalPending = todos.length - totalCompleted;
 
-const store = createFlatStore({
-  todos: [],
-  filter: "all",
+  todoStatsStore.set({ totalCompleted, totalPending });
 });
-
-function TodoList() {
-  const todos = useFlatStore(store, (state) =>
-    state.todos.filter((todo) =>
-      state.filter === "all"
-        ? true
-        : state.filter === "active"
-        ? !todo.completed
-        : todo.completed
-    )
-  );
-
-  return (
-    <ul>
-      {todos.map((todo) => (
-        <li key={todo.id}>{todo.text}</li>
-      ))}
-    </ul>
-  );
-}
 ```
 
 ## Comparison with Other Libraries
@@ -231,7 +263,8 @@ function TodoList() {
 
    ```tsx
    // For component-specific state
-   const localStore = createStore({ count: 0 });
+   const localStore = createBonsaiStore({ count: 0 });
+   const count = localStore.use((state) => state.count);
    ```
 
 2. **Optimize Re-renders**
@@ -250,6 +283,189 @@ function TodoList() {
      age: 30,
    });
    ```
+
+## Middleware Examples
+
+### Basic Middleware Composition
+
+```tsx
+import {
+  initTreeState,
+  createValidationMiddleware,
+  createLoggingMiddleware,
+  createPersistenceMiddleware,
+} from "@bonsai/state";
+
+// Validation middleware
+const positiveNumberValidator = createValidationMiddleware<number>(
+  (path, nextValue) => {
+    if (typeof nextValue !== "number") {
+      return "Value must be a number";
+    }
+    if (nextValue < 0) {
+      return "Value must be positive";
+    }
+    return true;
+  }
+);
+
+// Logging middleware
+const logger = createLoggingMiddleware<number>({
+  logPath: true,
+  logValue: true,
+  logPrevValue: true,
+});
+
+// Persistence middleware
+const persister = createPersistenceMiddleware<number>("counter");
+
+// Initialize with middleware chain
+initTreeState({
+  initialState: { counter: 0 },
+  middleware: [positiveNumberValidator, logger, persister],
+});
+```
+
+### Async Operations with Debouncing
+
+```tsx
+import {
+  initTreeState,
+  createAsyncMiddleware,
+  createDebounceMiddleware,
+} from "@bonsai/state";
+
+// Async middleware for API calls
+const apiMiddleware = createAsyncMiddleware<number>(async (path, nextValue) => {
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  console.log(`[API] Updating ${path} to ${nextValue}`);
+  return nextValue;
+});
+
+// Debounce middleware
+const debouncer = createDebounceMiddleware<number>(500);
+
+initTreeState({
+  initialState: { searchQuery: "" },
+  middleware: [debouncer, apiMiddleware],
+});
+```
+
+### Rate Limiting and Time Windows
+
+```tsx
+import {
+  initTreeState,
+  createThrottleMiddleware,
+  createTimeWindowMiddleware,
+} from "@bonsai/state";
+
+// Throttle middleware (1 update per second)
+const throttler = createThrottleMiddleware<number>(1);
+
+// Time window middleware (business hours only)
+const timeWindow = createTimeWindowMiddleware<number>([
+  9, 10, 11, 12, 13, 14, 15, 16, 17,
+]);
+
+initTreeState({
+  initialState: { apiCalls: 0 },
+  middleware: [throttler, timeWindow],
+});
+```
+
+### Complex Validation
+
+```tsx
+import {
+  initTreeState,
+  createValidationMiddleware,
+  createAsyncMiddleware,
+} from "@bonsai/state";
+
+// User data validation
+const userValidator = createValidationMiddleware<{
+  name: string;
+  age: number;
+  email: string;
+}>((path, nextValue) => {
+  if (!nextValue.name || nextValue.name.length < 2) {
+    return "Name must be at least 2 characters long";
+  }
+  if (nextValue.age < 18) {
+    return "User must be at least 18 years old";
+  }
+  if (!nextValue.email.includes("@")) {
+    return "Invalid email address";
+  }
+  return true;
+});
+
+// Async validation
+const asyncValidator = createAsyncMiddleware<{
+  name: string;
+  age: number;
+  email: string;
+}>(async (path, nextValue) => {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  console.log(`[Validation] Checking user data for ${nextValue.name}`);
+  return nextValue;
+});
+
+initTreeState({
+  initialState: {
+    user: {
+      name: "",
+      age: 0,
+      email: "",
+    },
+  },
+  middleware: [userValidator, asyncValidator],
+});
+```
+
+### Form Handling
+
+```tsx
+import {
+  initTreeState,
+  createDebounceMiddleware,
+  createPersistenceMiddleware,
+  createLoggingMiddleware,
+} from "@bonsai/state";
+
+// Form state with debouncing, persistence, and logging
+initTreeState({
+  initialState: {
+    form: {
+      username: "",
+      password: "",
+      email: "",
+    },
+  },
+  middleware: [
+    createDebounceMiddleware<{
+      username: string;
+      password: string;
+      email: string;
+    }>(300),
+    createLoggingMiddleware<{
+      username: string;
+      password: string;
+      email: string;
+    }>({
+      logPath: true,
+      logValue: false, // Don't log sensitive data
+      logPrevValue: false,
+    }),
+    createPersistenceMiddleware<{
+      username: string;
+      password: string;
+      email: string;
+    }>("formState"),
+  ],
+});
+```
 
 ## Documentation
 
