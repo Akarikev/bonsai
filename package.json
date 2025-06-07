@@ -1,5 +1,5 @@
 {
-  "name": "@bonsai/state",
+  "name": "@bonsai-ts/state",
   "version": "1.0.0",
   "description": "A flexible state management library with tree and flat state support, middleware, and dev tools",
   "main": "dist/index.js",

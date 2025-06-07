@@ -32,16 +32,16 @@ Bonsai offers a unique approach to state management:
 
 ```bash
 # Using npm
-npm install @bonsai/state
+npm install @bonsai-ts/state
 
 # Using yarn
-yarn add @bonsai/state
+yarn add @bonsai-ts/state
 
 # Using pnpm
-pnpm add @bonsai/state
+pnpm add @bonsai-ts/state
 
 # Using bun
-bun add @bonsai/state
+bun add @bonsai-ts/state
 ```
 
 ## Quick Start
@@ -49,7 +49,7 @@ bun add @bonsai/state
 ### Tree State
 
 ```tsx
-import { initTreeState, useTreeBonsai, set } from "@bonsai/state";
+import { initTreeState, useTreeBonsai, set } from "@bonsai-ts/state";
 
 // Initialize tree state
 initTreeState({
@@ -80,7 +80,7 @@ function Counter() {
 ### Flat State
 
 ```tsx
-import { useBonsai, setState } from "@bonsai/state";
+import { useBonsai, setState } from "@bonsai-ts/state";
 
 function UserProfile() {
   const name = useBonsai((state) => state.name || "");
@@ -100,7 +100,7 @@ function UserProfile() {
 ### DevTools
 
 ```tsx
-import { DevPanel } from "@bonsai/state";
+import { DevPanel } from "@bonsai-ts/state";
 
 function App() {
   return (
@@ -134,7 +134,7 @@ import {
   set,
   createLoggingMiddleware,
   createValidationMiddleware,
-} from "@bonsai/state";
+} from "@bonsai-ts/state";
 
 // Initialize with middleware
 initTreeState({
@@ -184,7 +184,7 @@ function UserProfile() {
 ### Flat State
 
 ```tsx
-import { useBonsai, setState } from "@bonsai/state";
+import { useBonsai, setState } from "@bonsai-ts/state";
 
 function UserProfile() {
   const name = useBonsai((state) => state.name || "");
@@ -212,7 +212,7 @@ function UserProfile() {
 ### Scoped State
 
 ```tsx
-import { createBonsaiStore } from "@bonsai/state";
+import { createBonsaiStore } from "@bonsai-ts/state";
 
 // Create a scoped store
 const todoStatsStore = createBonsaiStore<{
@@ -340,7 +340,7 @@ import {
   createValidationMiddleware,
   createLoggingMiddleware,
   createPersistenceMiddleware,
-} from "@bonsai/state";
+} from "@bonsai-ts/state";
 
 // Validation middleware
 const positiveNumberValidator = createValidationMiddleware<number>(
@@ -379,7 +379,7 @@ import {
   initTreeState,
   createAsyncMiddleware,
   createDebounceMiddleware,
-} from "@bonsai/state";
+} from "@bonsai-ts/state";
 
 // Async middleware for API calls
 const apiMiddleware = createAsyncMiddleware<number>(async (path, nextValue) => {
@@ -404,7 +404,7 @@ import {
   initTreeState,
   createThrottleMiddleware,
   createTimeWindowMiddleware,
-} from "@bonsai/state";
+} from "@bonsai-ts/state";
 
 // Throttle middleware (1 update per second)
 const throttler = createThrottleMiddleware<number>(1);
@@ -427,7 +427,7 @@ import {
   initTreeState,
   createValidationMiddleware,
   createAsyncMiddleware,
-} from "@bonsai/state";
+} from "@bonsai-ts/state";
 
 // User data validation
 const userValidator = createValidationMiddleware<{
@@ -478,7 +478,7 @@ import {
   createDebounceMiddleware,
   createPersistenceMiddleware,
   createLoggingMiddleware,
-} from "@bonsai/state";
+} from "@bonsai-ts/state";
 
 // Form state with debouncing, persistence, and logging
 initTreeState({
