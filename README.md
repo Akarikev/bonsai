@@ -11,6 +11,11 @@ A flexible state management library with tree and flat state support, middleware
 - 🛠️ **DevTools**: Visual debugging and state inspection
 - 📦 **TypeScript**: Full type safety and autocompletion
 
+## Prerequisites
+
+- [Bun](https://bun.sh) >= 1.0.0
+- React >= 18.2.0
+
 ## Installation
 
 ```bash
@@ -19,6 +24,8 @@ npm install @bonsai/state
 yarn add @bonsai/state
 # or
 pnpm add @bonsai/state
+#or
+bun add @bonsai/state
 ```
 
 ## Quick Start
@@ -61,7 +68,7 @@ function App() {
 
 ## Documentation
 
-For detailed documentation, visit our [documentation site](https://yourusername.github.io/bonsai).
+For detailed documentation, visit our [documentation site](https://github.com/Akarikev/bonsai#readme).
 
 ### Key Concepts
 
@@ -105,7 +112,6 @@ bun install
 # Start development server
 bun run dev
 
-
 # Build library
 bun run build
 
@@ -122,4 +128,4 @@ Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTIN
 
 ## License
 
-MIT © [Your Name]
+MIT © Prince Elorm(Akarikev)
