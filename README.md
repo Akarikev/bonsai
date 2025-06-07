@@ -46,41 +46,82 @@ bun add @bonsai/state
 
 ## Quick Start
 
-```tsx
-import { initTreeState, useTreeBonsai, set, DevPanel } from "@bonsai/state";
+### Tree State
 
-// Initialize state
+```tsx
+import { initTreeState, useTreeBonsai, set } from "@bonsai/state";
+
+// Initialize tree state
 initTreeState({
   initialState: {
-    user: { name: "", age: 0 },
-    todos: [],
+    count: 0,
+    user: {
+      name: "elorm",
+      isActive: true,
+    },
   },
 });
 
 // Use in components
-function UserProfile() {
+function Counter() {
+  const count = useTreeBonsai("count");
   const name = useTreeBonsai("user/name");
-  const age = useTreeBonsai("user/age");
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <p>Name: {name}</p>
+      <button onClick={() => set("count", count + 1)}>Increment</button>
+    </div>
+  );
+}
+```
+
+### Flat State
+
+```tsx
+import { useBonsai, setState } from "@bonsai/state";
+
+function UserProfile() {
+  const name = useBonsai((state) => state.name || "");
+  const isActive = useBonsai((state) => state.isActive || false);
 
   return (
     <div>
       <p>Name: {name}</p>
-      <p>Age: {age}</p>
-      <button onClick={() => set("user/age", age + 1)}>Increment Age</button>
+      <button onClick={() => setState({ isActive: !isActive })}>
+        Toggle Status
+      </button>
     </div>
   );
 }
+```
 
-// Add DevPanel for debugging
+### DevTools
+
+```tsx
+import { DevPanel } from "@bonsai/state";
+
 function App() {
   return (
     <div>
+      <Counter />
       <UserProfile />
+      {/* Add DevPanel to debug state changes */}
       <DevPanel />
     </div>
   );
 }
 ```
+
+The DevPanel provides:
+
+- 🌳 **State Tree View**: Visualize your entire state tree
+- 📝 **Log Viewer**: Track all state changes in real-time
+- 🔍 **State Inspector**: Inspect and modify state values
+- ⚡ **Performance Monitor**: Track re-renders and updates
+
+![DevPanel Preview](docs/devpanel-preview.png)
 
 ## More Examples
 

@@ -14,7 +14,7 @@ import {
   createPersistenceMiddleware,
 } from "./bonsai/middleware";
 
-import { addLog, getLogs } from "./bonsai/devlog";
+import { addLog } from "./bonsai/devlog";
 
 // ─────────────── Initialize State and Middleware ───────────────
 
@@ -72,6 +72,7 @@ const todoStatsStore = createBonsaiStore<{
 function TodoList() {
   const todos = useTreeBonsai("todos") || [];
   const filter = useTreeBonsai("filter") || "all";
+  const name = useTreeBonsai("user/name") || "";
   const theme = useTreeBonsai("user/preferences/theme") || "light";
 
   const filteredTodos = todos.filter((todo: any) => {
@@ -200,6 +201,7 @@ function UserProfile() {
           value={name}
           onChange={(e) => {
             addLog(`👤 Updating name to: ${e.target.value}`);
+            set("user/name", e.target.value);
             setState({ name: e.target.value });
           }}
         />
