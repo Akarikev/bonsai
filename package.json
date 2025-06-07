@@ -38,10 +38,11 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.5.1",
-    "typescript": "^5.0.0",
+    "typedoc": "^0.24.8",
+    "typescript": "^5.8.3",
     "vite": "^6.3.5",
-    "vitest": "^1.0.0",
-    "typedoc": "^0.24.0"
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^1.6.1"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

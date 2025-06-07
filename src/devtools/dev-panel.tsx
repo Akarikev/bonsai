@@ -3,6 +3,64 @@ import { get, subscribe, set } from "../bonsai/tree";
 import { getAllPaths } from "../bonsai/utils";
 import { getLogs } from "../bonsai/devlog";
 
+/**
+ * Represents a single log entry in the state update history
+ */
+interface LogEntry {
+  timestamp: number;
+  path: string;
+  value: any;
+  previousValue?: any;
+}
+
+/**
+ * Props for the PathInput component
+ */
+interface PathInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+}
+
+/**
+ * Props for the ValueInput component
+ */
+interface ValueInputProps {
+  value: any;
+  onChange: (value: any) => void;
+  path: string;
+}
+
+/**
+ * Props for the Button component
+ */
+interface ButtonProps {
+  children: React.ReactNode;
+  onClick: () => void;
+  className?: string;
+}
+
+/**
+ * DevPanel Component
+ *
+ * A development tool panel for debugging and monitoring Bonsai state management.
+ * Provides real-time state visualization, state updates logging, and state inspection capabilities.
+ *
+ * @component
+ * @example
+ * ```tsx
+ * import { DevPanel } from '@bonsai/state';
+ *
+ * function App() {
+ *   return (
+ *     <div>
+ *       <YourApp />
+ *       <DevPanel />
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
 export function DevPanel() {
   const [tree, setTree] = React.useState<Record<string, any>>({});
   const [logs, setLogs] = React.useState<string[]>([]);
@@ -449,4 +507,93 @@ export function DevPanel() {
       )}
     </>
   );
+}
+
+/**
+ * StateTree Component
+ *
+ * Renders a collapsible tree view of the current state.
+ * Allows inspection of nested state objects and their values.
+ *
+ * @component
+ * @param {Object} props - Component props
+ * @param {any} props.data - The state data to display
+ * @param {string} props.path - The current path in the state tree
+ */
+function StateTree({ data, path }: { data: any; path: string }) {
+  // ... existing code ...
+}
+
+/**
+ * LogViewer Component
+ *
+ * Displays a chronological list of state updates and changes.
+ * Shows timestamps, paths, and values for each state change.
+ *
+ * @component
+ * @param {Object} props - Component props
+ * @param {Array<LogEntry>} props.logs - Array of log entries to display
+ */
+function LogViewer({ logs }: { logs: LogEntry[] }) {
+  // ... existing code ...
+}
+
+/**
+ * StateInspector Component
+ *
+ * Provides detailed inspection of state values at a specific path.
+ * Shows the current value and allows modification through the UI.
+ *
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} props.path - The path to inspect
+ * @param {any} props.value - The current value at the path
+ */
+function StateInspector({ path, value }: { path: string; value: any }) {
+  // ... existing code ...
+}
+
+/**
+ * PathInput Component
+ *
+ * Input field for entering state paths with validation and autocomplete.
+ *
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} props.value - Current path value
+ * @param {Function} props.onChange - Callback when path changes
+ * @param {Function} props.onSubmit - Callback when path is submitted
+ */
+function PathInput({ value, onChange, onSubmit }: PathInputProps) {
+  // ... existing code ...
+}
+
+/**
+ * ValueInput Component
+ *
+ * Input field for modifying state values with type-aware editing.
+ *
+ * @component
+ * @param {Object} props - Component props
+ * @param {any} props.value - Current value
+ * @param {Function} props.onChange - Callback when value changes
+ * @param {string} props.path - The path being edited
+ */
+function ValueInput({ value, onChange, path }: ValueInputProps) {
+  // ... existing code ...
+}
+
+/**
+ * Button Component
+ *
+ * Styled button component with hover and active states.
+ *
+ * @component
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Button content
+ * @param {Function} props.onClick - Click handler
+ * @param {string} [props.className] - Additional CSS classes
+ */
+function Button({ children, onClick, className = "" }: ButtonProps) {
+  // ... existing code ...
 }
