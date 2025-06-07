@@ -249,13 +249,20 @@ initTreeState({
 ## Best Practices
 
 1. **Initialize Early**: Set up your state and middleware before React mounts
-2. **Choose the Right Pattern**: Use tree state for nested data, flat state for simple data
+2. **Choose the Right Pattern**:
+   - Use tree state for nested data and path-based access
+   - Use flat state for simple key-value stores
+   - Use scoped state for component-specific data
 3. **Compose Middleware**: Chain multiple middleware functions for complex behaviors
 4. **Handle Errors**: Always handle potential errors in async middleware
 5. **Secure Sensitive Data**: Don't log sensitive information
 6. **Use TypeScript**: Leverage TypeScript for better type safety
 7. **Keep State Minimal**: Only store what you need in global state
 8. **Use Scoped State**: Use scoped state for component-specific data
+9. **Performance Optimization**:
+   - Use specific paths instead of entire objects
+   - Batch related updates
+   - Unsubscribe from paths when components unmount
 
 ## DevTools Integration
 
@@ -512,3 +519,64 @@ const stateAwareMiddleware = createAsyncMiddleware(async (path, value) => {
 - `createThrottleMiddleware(limit)`
 - `createPersistenceMiddleware(key)`
 - `createTimeWindowMiddleware(allowedHours)`
+
+## Contributing to Bonsai
+
+### Project Structure
+
+```
+src/
+├── bonsai/
+│   ├── tree.ts         # Tree state implementation
+│   ├── flat.ts         # Flat state implementation
+│   ├── createStore.ts  # Scoped state implementation
+│   ├── middleware.ts   # Middleware system
+│   ├── devlog.ts       # Development logging
+│   └── types.ts        # TypeScript types
+├── devtools/
+│   └── dev-panel.tsx   # DevTools implementation
+└── index.ts           # Main entry point
+```
+
+### Development Setup
+
+1. Clone the repository
+2. Install dependencies: `bun install`
+3. Start development server: `bun run dev`
+4. Build: `bun run build`
+
+### Adding New Features
+
+1. **Middleware**:
+
+   - Create new middleware in `src/bonsai/middleware.ts`
+   - Add TypeScript types in `src/bonsai/types.ts`
+   - Update documentation
+
+2. **State Management**:
+
+   - Modify core files in `src/bonsai/`
+   - Ensure TypeScript types are updated
+   - Update documentation
+
+3. **DevTools**:
+   - Add new features to `src/devtools/dev-panel.tsx`
+   - Update styles in `src/devtools/styles.css`
+   - Update documentation
+
+### Documentation
+
+1. Update relevant sections in:
+   - `README.md`
+   - `docs/BONSAI.MD`
+   - `docs/USEBONSAI.MD`
+2. Add JSDoc comments to new code
+3. Include examples of new features
+4. Update type definitions
+
+### Pull Request Process
+
+1. Create a new branch
+2. Update documentation
+3. Build: `bun run build`
+4. Submit PR with description of changes
