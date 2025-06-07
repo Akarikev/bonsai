@@ -13,7 +13,6 @@ A flexible state management library with tree and flat state support, middleware
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) >= 1.0.0
 - React >= 18.2.0
 
 ## Installation
