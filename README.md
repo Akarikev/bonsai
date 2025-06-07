@@ -67,7 +67,10 @@ function App() {
 
 ## Documentation
 
-For detailed documentation, visit our [documentation site](https://github.com/Akarikev/bonsai#readme).
+For detailed documentation, check out our docs:
+
+- [Core Documentation](docs/BONSAI.MD) - Learn about Bonsai's core concepts and architecture
+- [Usage Guide](docs/USEBONSAI.MD) - Comprehensive guide with examples and best practices
 
 ### Key Concepts
 
