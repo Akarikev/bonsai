@@ -255,6 +255,11 @@ subscribe("todos", (todos) => {
 | TypeScript   | ✅     | ✅    | ✅      | ✅    |
 | Zero Config  | ✅     | ❌    | ✅      | ✅    |
 
+> **Note**: Bundle sizes are gzipped. Bonsai's actual sizes:
+>
+> - ESM: 29.89 KB (7.12 KB gzipped)
+> - UMD: 16.43 KB (5.88 KB gzipped)
+
 ## Troubleshooting
 
 ### Common Issues
