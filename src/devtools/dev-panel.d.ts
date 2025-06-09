@@ -7,7 +7,7 @@
  * @component
  * @example
  * ```tsx
- * import { DevPanel } from '@bonsai/state';
+ * import { DevPanel } from '@bonsai-ts/state/devtools';
  *
  * function App() {
  *   return (
