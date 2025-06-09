@@ -591,9 +591,13 @@ bun run benchmark
 bun run docs
 ```
 
-## Contributing
+## 🤝 Contributing
 
-Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) to get started.
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+- [GitHub Issues](https://github.com/Akarikev/bonsai/issues)
+- [Documentation](docs/BONSAI.MD)
+- [Examples](docs/USEBONSAI.MD)
 
 ## Support
 
@@ -601,6 +605,8 @@ Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTIN
 - [Documentation](docs/BONSAI.MD)
 - [Examples](docs/USEBONSAI.MD)
 
-## License
+## 📄 License
 
-MIT © Prince Elorm(Akarikev)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+- MIT © Prince Elorm(Akarikev)

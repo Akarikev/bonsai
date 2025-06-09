@@ -87,7 +87,8 @@ bonsai/
 │  │  ├─ devlog.ts          # Development logging
 │  │  └─ examples/          # Example implementations
 │  ├─ devtools/             # Development tools
-│  │  └─ dev-panel.tsx      # DevTools UI component
+│  │  ├─ dev-panel.tsx      # DevTools UI component
+│  │  └─ index.ts           # DevTools entry point
 │  ├─ index.ts              # Main entry point
 │  └─ main.tsx              # Development playground
 ├─ docs/                    # Documentation
@@ -95,7 +96,47 @@ bonsai/
 │  └─ USEBONSAI.MD         # Usage guide
 ├─ tests/                   # Test files
 └─ dist/                    # Build output
+    ├─ index.d.ts          # Main package type declarations
+    ├─ devtools.d.ts       # DevTools type declarations
+    ├─ index.mjs           # ESM bundle
+    └─ devtools.mjs        # DevTools ESM bundle
 ```
+
+## Build Process
+
+The project uses Vite for building and bundling. The build process:
+
+1. Generates TypeScript declaration files (`.d.ts`)
+2. Creates ESM and CommonJS bundles
+3. Handles multiple entry points (main package and DevTools)
+4. Automatically excludes DevTools from production builds
+
+To build the project:
+
+```bash
+bun run build
+```
+
+### Type Declarations
+
+Type declarations are automatically generated during the build process:
+
+- `dist/index.d.ts`: Main package types
+- `dist/devtools.d.ts`: DevTools types
+
+These files are:
+
+- Used for development and type checking
+- Not included in production bundles
+- Required for proper TypeScript support
+
+### DevTools
+
+The DevTools component is:
+
+- Optional and only included when explicitly imported
+- Automatically excluded from production builds
+- Available as a separate entry point: `@bonsai-ts/state/devtools`
 
 ## Coding Standards
 
@@ -105,6 +146,7 @@ bonsai/
 - Maintain strict type checking
 - Document complex types with JSDoc comments
 - Use meaningful type names
+- Ensure type declarations are generated correctly
 
 ### React Components
 
@@ -112,6 +154,7 @@ bonsai/
 - Keep components small and focused
 - Use proper prop types
 - Follow React best practices
+- Document component props and usage
 
 ### State Management
 
@@ -119,6 +162,7 @@ bonsai/
 - Document state shape
 - Use middleware for side effects
 - Maintain immutability
+- Follow the established patterns for tree and flat state
 
 ### Testing
 
@@ -126,6 +170,7 @@ bonsai/
 - Maintain test coverage
 - Use meaningful test descriptions
 - Test edge cases
+- Include benchmarks for performance-critical code
 
 ## Commit Guidelines
 
@@ -148,6 +193,8 @@ Types:
 - `refactor`: Code refactoring
 - `test`: Adding or updating tests
 - `chore`: Maintenance tasks
+- `perf`: Performance improvements
+- `build`: Build system changes
 
 ## Documentation
 
@@ -155,6 +202,7 @@ Types:
 - Document new features in USEBONSAI.MD
 - Add JSDoc comments for new functions
 - Include examples for new features
+- Keep type declarations up to date
 
 ## Review Process
 
@@ -163,6 +211,7 @@ Types:
 3. Code must follow project standards
 4. Documentation must be updated
 5. Tests must be included
+6. Type declarations must be generated correctly
 
 ## Getting Help
 
