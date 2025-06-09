@@ -59,7 +59,7 @@ export function initTreeState(config: StoreConfig<any> = {}) {
     state = config.initialState;
   }
   if (config.middleware) {
-    middleware = config.middleware;
+    middleware = [...config.middleware];
   }
 }
 

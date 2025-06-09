@@ -1,7 +1,7 @@
 ---
 # Bonsai State Management Library 🌳✨
 
-Welcome to **Bonsai**, a lightweight, flexible state management library designed to grow with your app’s needs — from simple flat state trees to deeply nested hierarchical states.
+Welcome to **Bonsai**, a lightweight, flexible state management library designed to grow with your app's needs — from simple flat state trees to deeply nested hierarchical states.
 ---
 
 ## What is Bonsai?
@@ -16,11 +16,11 @@ Bonsai is a modern state management toolkit for React (and beyond) that combines
 - **Performance** — Powered by React's `useSyncExternalStore`, ensuring efficient updates and minimal re-renders.
 - **Middleware support** — Intercept, modify, or block state changes easily.
 - **Subscriptions & Selectors** — Listen to specific parts of the state to optimize renders.
-- **Dev Panel (coming soon!)** — Debug and inspect your state tree with a visual interface.
+- **Dev Panel** — Debug and inspect your state tree with a visual interface.
 
 ---
 
-## Features Built So Far
+## Features
 
 - **Flat State Management (`flat.ts`)**
   A simple key-value store with subscription, middleware, and selector support. Great for straightforward app state.
@@ -36,6 +36,14 @@ Bonsai is a modern state management toolkit for React (and beyond) that combines
 - **Middleware API**
   Register middleware functions to intercept state changes and customize behavior.
 
+- **Dev Panel**
+  A powerful development tool that provides:
+  - Real-time state visualization
+  - State change logs
+  - Path exploration
+  - Middleware debugging
+  - Interactive state editing
+
 ---
 
 ## What Bonsai Aims to Achieve
@@ -43,7 +51,6 @@ Bonsai is a modern state management toolkit for React (and beyond) that combines
 - Provide an elegant API that scales from simple to complex app states without friction.
 - Offer a robust middleware system to enable logging, validation, persistence, and more.
 - Deliver performant React integration leveraging modern React APIs.
-- Build a Dev Panel UI to visualize and manipulate the state tree easily.
 - Support micro-frontends and modular architectures by enabling isolated state slices.
 
 ---
@@ -53,8 +60,9 @@ Bonsai is a modern state management toolkit for React (and beyond) that combines
 - Core flat and tree state management implementations are stable and fully functional.
 - Middleware support is implemented and working in both systems.
 - Hooks for React integration are in place and tested.
-- Dev Panel UI is in early design; foundational pieces are set but not shipped.
-- Documentation and examples are being drafted for smoother onboarding.
+- Dev Panel UI is implemented and ready for use.
+- TypeScript support with automatic declaration file generation.
+- Documentation and examples are available for smooth onboarding.
 
 ---
 
@@ -62,7 +70,6 @@ Bonsai is a modern state management toolkit for React (and beyond) that combines
 
 - 🚀 **Subscription Enhancements:** Fine-tune subscriptions for batch updates and selective rendering.
 - 🎛️ **Middleware Expansion:** Add more middleware utilities (async, side effects, persistence).
-- 🛠️ **Dev Panel:** Build a powerful, intuitive UI for debugging and state inspection.
 - 🌐 **Micro-Frontend Support:** Facilitate isolated state management for modular apps.
 - 📚 **Examples & Docs:** Provide rich guides, use-cases, and tutorials for developers.
 - 🤝 **Community & Contributions:** Open Bonsai to contributions, feedback, and collaborations.
@@ -74,7 +81,7 @@ Bonsai is a modern state management toolkit for React (and beyond) that combines
 You can start with the flat state system for simple global state needs:
 
 ```ts
-import { useBonsai, setState } from "./bonsai/flat";
+import { useBonsai, setState } from "@bonsai-ts/state";
 
 function Counter() {
   const count = useBonsai((state) => state.count || 0);
@@ -90,7 +97,7 @@ function Counter() {
 Or leverage the tree system for nested state:
 
 ```ts
-import { useTreeBonsai, set } from "./bonsai/tree";
+import { useTreeBonsai, set } from "@bonsai-ts/state";
 
 function UserProfile() {
   const name = useTreeBonsai("user/profile/name") || "Guest";
@@ -104,8 +111,23 @@ function UserProfile() {
 }
 ```
 
+Add the Dev Panel to your app for debugging:
+
+```ts
+import { DevPanel } from "@bonsai-ts/state/devtools";
+
+function App() {
+  return (
+    <div>
+      {/* Your app components */}
+      <DevPanel />
+    </div>
+  );
+}
+```
+
 ---
 
 ## Join the Journey
 
-Bonsai is a work-in-progress, crafted with love and vision. If you’re interested in contributing, sharing ideas, or just watching it grow, stay tuned and get involved!
+Bonsai is actively maintained and welcomes contributions. If you're interested in contributing, sharing ideas, or just watching it grow, check out our [GitHub repository](https://github.com/Akarikev/bonsai)!

@@ -21,8 +21,8 @@ Bonsai is a flexible state management system that supports both flat and tree-ba
 ## Quick Start
 
 ```typescript
-import { initTreeState, set, get } from "./bonsai/tree";
-import { createLoggingMiddleware } from "./bonsai/middleware";
+import { initTreeState, set, get } from "@bonsai-ts/state";
+import { createLoggingMiddleware } from "@bonsai-ts/state";
 
 // Initialize with middleware
 initTreeState({
@@ -42,7 +42,7 @@ const name = get("user/name");
 Tree state is useful for nested data structures and path-based access:
 
 ```typescript
-import { set, get, subscribe } from "./bonsai/tree";
+import { set, get, subscribe } from "@bonsai-ts/state";
 
 // Set values at paths
 set("user/name", "John");
@@ -67,7 +67,7 @@ unsubscribe();
 Flat state is simpler and works well for single-level state:
 
 ```typescript
-import { useBonsai, setState } from "./bonsai/flat";
+import { useBonsai, setState } from "@bonsai-ts/state";
 
 // In a React component
 function Counter() {
@@ -87,7 +87,7 @@ function Counter() {
 Scoped state is useful for component-specific state:
 
 ```typescript
-import { createBonsaiStore } from "./bonsai/createStore";
+import { createBonsaiStore } from "@bonsai-ts/state";
 
 // Create a scoped store
 const userStore = createBonsaiStore<{ name: string }>();
@@ -110,7 +110,7 @@ function UserProfile() {
 ### Basic Middleware Usage
 
 ```typescript
-import { useTreeMiddleware } from "./bonsai/tree";
+import { useTreeMiddleware } from "@bonsai-ts/state";
 
 // Register middleware
 useTreeMiddleware((path, nextVal, oldVal) => {
@@ -175,7 +175,7 @@ const timeWindow = createTimeWindowMiddleware([
 ### Tree State Hook
 
 ```typescript
-import { useTreeBonsai } from "./bonsai/usetreebonsai";
+import { useTreeBonsai } from "@bonsai-ts/state";
 
 function UserProfile() {
   const name = useTreeBonsai("user/name");
@@ -194,7 +194,7 @@ function UserProfile() {
 ### Flat State Hook
 
 ```typescript
-import { useBonsai, setState } from "./bonsai/flat";
+import { useBonsai, setState } from "@bonsai-ts/state";
 
 function Counter() {
   const count = useBonsai((state) => state.count ?? 0);
@@ -271,7 +271,7 @@ Bonsai includes a powerful development panel for debugging and monitoring state 
 ### DevPanel Component
 
 ```typescript
-import { DevPanel } from "./devtools/dev-panel";
+import { DevPanel } from "@bonsai-ts/state/devtools";
 
 function App() {
   return (
@@ -289,11 +289,13 @@ The DevPanel provides:
 - State change logs
 - Path exploration
 - Middleware debugging
+- Interactive state editing
+- Type-safe state updates
 
 ### Logging System
 
 ```typescript
-import { addLog, getLogs } from "./bonsai/devlog";
+import { addLog, getLogs } from "@bonsai-ts/state";
 
 // Add custom logs
 addLog("User logged in");
@@ -307,7 +309,7 @@ const logs = getLogs();
 ### Getting All State Paths
 
 ```typescript
-import { get } from "./bonsai/tree";
+import { get } from "@bonsai-ts/state";
 
 function getAllPaths(obj: any, prefix = ""): string[] {
   if (typeof obj !== "object" || obj === null) return [prefix.slice(0, -1)];

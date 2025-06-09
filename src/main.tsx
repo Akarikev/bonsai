@@ -70,17 +70,53 @@ const todoStatsStore = createBonsaiStore<{
 
 // Tree State Component
 function TodoList() {
-  const todos = useTreeBonsai("todos") || [];
-  const filter = useTreeBonsai("filter") || "all";
-  const name = useTreeBonsai("user/name") || "";
-  const theme = useTreeBonsai("user/preferences/theme") || "light";
+  const todos = useTreeBonsai<any[]>("todos") || [];
+  const filter = useTreeBonsai<string>("filter") || "all";
+  const name = useTreeBonsai<string>("user/name") || "";
+  const theme = useTreeBonsai<string>("user/preferences/theme") || "light";
 
-  const filteredTodos = todos.filter((todo: any) => {
-    if (filter === "all") return true;
-    if (filter === "completed") return todo.completed;
-    if (filter === "active") return !todo.completed;
-    return true;
-  });
+  const filteredTodos = React.useMemo(() => {
+    return todos.filter((todo: any) => {
+      if (filter === "all") return true;
+      if (filter === "completed") return todo.completed;
+      if (filter === "active") return !todo.completed;
+      return true;
+    });
+  }, [todos, filter]);
+
+  const handleToggleTodo = React.useCallback(
+    async (index: number, todo: any) => {
+      const newTodos = [...todos];
+      newTodos[index] = { ...todo, completed: !todo.completed };
+      addLog(`✅ Toggling todo completion: ${todo.text}`);
+      await set("todos", newTodos);
+    },
+    [todos]
+  );
+
+  const handleDeleteTodo = React.useCallback(
+    async (index: number, todo: any) => {
+      const newTodos = todos.filter((_: any, i: number) => i !== index);
+      addLog(`🗑️ Deleting todo: ${todo.text}`);
+      await set("todos", newTodos);
+    },
+    [todos]
+  );
+
+  const handleAddTodo = React.useCallback(
+    async (text: string) => {
+      const newTodos = [
+        ...todos,
+        {
+          text,
+          completed: false,
+        },
+      ];
+      addLog(`➕ Adding new todo: ${text}`);
+      await set("todos", newTodos);
+    },
+    [todos]
+  );
 
   return (
     <div
@@ -129,22 +165,11 @@ function TodoList() {
             <input
               type="checkbox"
               checked={todo.completed}
-              onChange={() => {
-                const newTodos = [...todos];
-                newTodos[index] = { ...todo, completed: !todo.completed };
-                addLog(`✅ Toggling todo completion: ${todo.text}`);
-                set("todos", newTodos);
-              }}
+              onChange={() => handleToggleTodo(index, todo)}
             />
             {todo.text}
             <button
-              onClick={() => {
-                const newTodos = todos.filter(
-                  (_: any, i: number) => i !== index
-                );
-                addLog(`🗑️ Deleting todo: ${todo.text}`);
-                set("todos", newTodos);
-              }}
+              onClick={() => handleDeleteTodo(index, todo)}
               style={{ marginLeft: 10 }}
             >
               Delete
@@ -158,15 +183,7 @@ function TodoList() {
           placeholder="Add new todo"
           onKeyDown={(e) => {
             if (e.key === "Enter" && e.currentTarget.value) {
-              const newTodos = [
-                ...todos,
-                {
-                  text: e.currentTarget.value,
-                  completed: false,
-                },
-              ];
-              addLog(`➕ Adding new todo: ${e.currentTarget.value}`);
-              set("todos", newTodos);
+              handleAddTodo(e.currentTarget.value);
               e.currentTarget.value = "";
             }
           }}

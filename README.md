@@ -1,5 +1,10 @@
 # Bonsai State Management 🌳
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0.0-blue)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.2.0-blue)](https://reactjs.org/)
+[![Bundle Size](https://img.shields.io/badge/Bundle%20Size-7KB%20gzipped-green)](https://img.shields.io/badge/Bundle%20Size-7KB%20gzipped-green)
+
 A flexible and lightweight state management library for React applications, featuring tree and flat state support, middleware system, and powerful dev tools.
 
 ## Why Bonsai? 🌱
@@ -97,29 +102,32 @@ function UserProfile() {
 }
 ```
 
-### DevTools
+### DevTools (Optional)
 
 ```tsx
-import { DevPanel } from "@bonsai-ts/state";
+import { DevPanel } from "@bonsai-ts/state/devtools";
 
 function App() {
   return (
     <div>
       <Counter />
       <UserProfile />
-      {/* Add DevPanel to debug state changes */}
+      {/* Add DevPanel only if you want to visualize and debug state changes */}
       <DevPanel />
     </div>
   );
 }
 ```
 
-The DevPanel provides:
+The DevPanel is an optional development tool that provides:
 
 - 🌳 **State Tree View**: Visualize your entire state tree
 - 📝 **Log Viewer**: Track all state changes in real-time
 - 🔍 **State Inspector**: Inspect and modify state values
 - ⚡ **Performance Monitor**: Track re-renders and updates
+- ✨ **Enhanced Object/Array Visualization**: Structured, collapsible, and editable views for complex data types.
+
+> **Note**: The DevPanel is only included in development builds and is automatically excluded from production builds. You only need to import and use it if you want to visualize and debug your application's state.
 
 ![DevPanel Preview](docs/devpanel-preview.png)
 
@@ -572,6 +580,12 @@ bun run build
 
 # Run tests
 bun test
+
+# Run bundle analysis
+bun run analyze
+
+# Run benchmarks
+bun run benchmark
 
 # Generate documentation
 bun run docs

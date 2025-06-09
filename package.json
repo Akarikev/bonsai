@@ -5,16 +5,32 @@
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./devtools": {
+      "types": "./dist/devtools.d.ts",
+      "import": "./dist/devtools.mjs",
+      "require": "./dist/devtools.js"
+    }
+  },
   "files": [
     "dist",
     "README.md"
   ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "prepublishOnly": "npm run build",
-    "test": "vitest",
-    "docs": "typedoc --out docs src"
+    "dev": "bunx --bun vite",
+    "build": "bunx --bun tsc && bunx --bun vite build",
+    "prepublishOnly": "bun run build",
+    "test": "bunx --bun vitest",
+    "docs": "bunx --bun typedoc --out docs src",
+    "analyze": "bunx --bun vite build --mode analyze",
+    "benchmark": "bunx --bun vitest run benchmark",
+    "size": "bunx --bun size-snapshot"
   },
   "keywords": [
     "state-management",
@@ -38,6 +54,11 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.5.1",
+    "ajv": "^8.17.1",
+    "ajv-draft-04": "^1.0.0",
+    "autocannon": "^7.15.0",
+    "rollup-plugin-size-snapshot": "^0.12.0",
+    "rollup-plugin-visualizer": "^5.9.2",
     "typedoc": "^0.24.8",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
@@ -48,10 +69,7 @@
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
   },
-  "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
-  },
+  "dependencies": {},
   "engines": {
     "node": ">=16.0.0",
     "bun": ">=1.0.0"

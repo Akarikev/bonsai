@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import { get, subscribe, set } from "../bonsai/tree";
 import { getAllPaths } from "../bonsai/utils";
 import { getLogs } from "../bonsai/devlog";
@@ -40,6 +40,388 @@ interface ButtonProps {
   className?: string;
 }
 
+// Memoized component for rendering object properties
+const ObjectItem = memo(
+  ({
+    label,
+    value,
+    path,
+    onUpdate,
+    isExpanded,
+    onToggleExpand,
+  }: {
+    label: string;
+    value: any;
+    path: string;
+    onUpdate: (path: string, value: any) => void;
+    isExpanded?: boolean;
+    onToggleExpand?: () => void;
+  }) => {
+    const isComplex = typeof value === "object" && value !== null;
+    const displayValue = isComplex
+      ? Array.isArray(value)
+        ? `Array (${value.length})`
+        : `Object (${Object.keys(value).length})`
+      : String(value);
+
+    const typeColor = useMemo(() => {
+      if (Array.isArray(value)) return "#2196F3"; // Blue for arrays
+      if (value === null) return "#9E9E9E"; // Grey for null
+      switch (typeof value) {
+        case "string":
+          return "#4CAF50"; // Green for strings
+        case "number":
+          return "#FF9800"; // Orange for numbers
+        case "boolean":
+          return "#E91E63"; // Pink for booleans
+        case "object":
+          return "#9C27B0"; // Purple for objects
+        case "undefined":
+          return "#9E9E9E"; // Grey for undefined
+        default:
+          return "#fff";
+      }
+    }, [value]);
+
+    return (
+      <div
+        style={{
+          padding: "6px 8px",
+          margin: "2px 0",
+          background: "rgba(0, 0, 0, 0.1)",
+          borderRadius: "4px",
+          borderLeft: `2px solid ${typeColor}`,
+          fontSize: "13px",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            cursor: isComplex ? "pointer" : "default",
+          }}
+          onClick={isComplex ? onToggleExpand : undefined}
+        >
+          <span
+            className="bonsai-mono"
+            style={{
+              color: "rgba(255, 255, 255, 0.8)",
+              fontWeight: "500",
+            }}
+          >
+            {label}:
+          </span>
+          {!isComplex ? (
+            <input
+              type={typeof value === "number" ? "number" : "text"}
+              value={displayValue}
+              onChange={(e) => {
+                let newValue: any = e.target.value;
+                if (typeof value === "number")
+                  newValue = parseFloat(newValue) || 0;
+                else if (typeof value === "boolean")
+                  newValue = e.target.checked;
+                onUpdate(path, newValue);
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "white",
+                fontFamily: "monospace",
+                fontSize: "13px",
+                outline: "none",
+                textAlign: "right",
+                flex: 1,
+                marginLeft: "10px",
+              }}
+            />
+          ) : (
+            <span
+              className="bonsai-mono"
+              style={{ color: typeColor, marginLeft: "10px" }}
+            >
+              {displayValue}
+            </span>
+          )}
+          {isComplex && (
+            <span style={{ marginLeft: "8px", fontSize: "10px" }}>
+              {isExpanded ? "▼" : "►"}
+            </span>
+          )}
+        </div>
+        {isComplex && isExpanded && (
+          <div style={{ marginLeft: "15px", marginTop: "8px" }}>
+            {Array.isArray(value) ? (
+              <ArrayView items={value} path={path} onUpdate={onUpdate} />
+            ) : (
+              <ObjectView data={value} path={path} onUpdate={onUpdate} />
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+// Memoized component for rendering objects
+const ObjectView = memo(
+  ({
+    data,
+    path,
+    onUpdate,
+  }: {
+    data: Record<string, any>;
+    path: string;
+    onUpdate: (path: string, value: any) => void;
+  }) => {
+    const [expandedPaths, setExpandedPaths] = React.useState<Set<string>>(
+      new Set()
+    );
+
+    const handleToggleExpand = useCallback((itemPath: string) => {
+      setExpandedPaths((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(itemPath)) {
+          newSet.delete(itemPath);
+        } else {
+          newSet.add(itemPath);
+        }
+        return newSet;
+      });
+    }, []);
+
+    const sortedKeys = useMemo(() => Object.keys(data).sort(), [data]);
+
+    return (
+      <div
+        style={{
+          maxHeight: "300px",
+          overflowY: "auto",
+          padding: "4px",
+          background: "rgba(0, 0, 0, 0.1)",
+          borderRadius: "4px",
+          border: "1px solid rgba(255, 255, 255, 0.05)",
+        }}
+      >
+        {sortedKeys.length === 0 ? (
+          <div
+            className="bonsai-text"
+            style={{ color: "rgba(255, 255, 255, 0.5)", padding: "8px" }}
+          >
+            Empty object
+          </div>
+        ) : (
+          sortedKeys.map((key) => {
+            const itemPath = `${path}/${key}`;
+            const value = data[key];
+            const isExpanded = expandedPaths.has(itemPath);
+            return (
+              <ObjectItem
+                key={itemPath}
+                label={key}
+                value={value}
+                path={itemPath}
+                onUpdate={onUpdate}
+                isExpanded={isExpanded}
+                onToggleExpand={() => handleToggleExpand(itemPath)}
+              />
+            );
+          })
+        )}
+      </div>
+    );
+  }
+);
+
+// Memoized component for rendering array items
+const ArrayItem = memo(
+  ({
+    value,
+    path,
+    onUpdate,
+  }: {
+    value: any;
+    path: string;
+    onUpdate: (path: string, value: any) => void;
+  }) => {
+    const isComplex = typeof value === "object" && value !== null;
+    const displayValue = isComplex
+      ? Array.isArray(value)
+        ? `Array (${value.length})`
+        : `Object (${Object.keys(value).length})`
+      : String(value);
+
+    const typeColor = useMemo(() => {
+      if (Array.isArray(value)) return "#2196F3"; // Blue for arrays
+      if (value === null) return "#9E9E9E"; // Grey for null
+      switch (typeof value) {
+        case "string":
+          return "#4CAF50"; // Green for strings
+        case "number":
+          return "#FF9800"; // Orange for numbers
+        case "boolean":
+          return "#E91E63"; // Pink for booleans
+        case "object":
+          return "#9C27B0"; // Purple for objects
+        case "undefined":
+          return "#9E9E9E"; // Grey for undefined
+        default:
+          return "#fff";
+      }
+    }, [value]);
+
+    const [isExpanded, setIsExpanded] = React.useState(false);
+
+    const handleToggleExpand = useCallback(() => {
+      setIsExpanded((prev) => !prev);
+    }, []);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      let newValue: any = e.target.value;
+      if (typeof value === "number") newValue = parseFloat(newValue) || 0;
+      else if (typeof value === "boolean") newValue = e.target.checked;
+      onUpdate(path, newValue);
+    };
+
+    return (
+      <div
+        style={{
+          padding: "4px 8px",
+          margin: "2px 0",
+          background: "rgba(0, 0, 0, 0.1)",
+          borderRadius: "4px",
+          borderLeft: `2px solid ${typeColor}`,
+          fontSize: "13px",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            cursor: isComplex ? "pointer" : "default",
+          }}
+          onClick={isComplex ? handleToggleExpand : undefined}
+        >
+          <span
+            className="bonsai-mono"
+            style={{ color: "rgba(255, 255, 255, 0.8)" }}
+          >
+            {path.split("/").pop()}:
+          </span>
+          {!isComplex ? (
+            <input
+              type={typeof value === "number" ? "number" : "text"}
+              value={displayValue}
+              onChange={handleChange}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "white",
+                fontFamily: "monospace",
+                fontSize: "13px",
+                outline: "none",
+                textAlign: "right",
+                flex: 1,
+                marginLeft: "10px",
+              }}
+            />
+          ) : (
+            <span
+              className="bonsai-mono"
+              style={{ color: typeColor, marginLeft: "10px" }}
+            >
+              {displayValue}
+            </span>
+          )}
+          {isComplex && (
+            <span style={{ marginLeft: "8px", fontSize: "10px" }}>
+              {isExpanded ? "▼" : "►"}
+            </span>
+          )}
+        </div>
+        {isComplex && isExpanded && (
+          <div style={{ marginLeft: "15px", marginTop: "8px" }}>
+            {Array.isArray(value) ? (
+              <ArrayView items={value} path={path} onUpdate={onUpdate} />
+            ) : (
+              <ObjectView data={value} path={path} onUpdate={onUpdate} />
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+// Memoized component for rendering arrays
+const ArrayView = memo(
+  ({
+    items,
+    path,
+    onUpdate,
+  }: {
+    items: any[];
+    path: string;
+    onUpdate: (path: string, value: any) => void;
+  }) => (
+    <div
+      style={{
+        maxHeight: "200px",
+        overflowY: "auto",
+        padding: "4px",
+        background: "rgba(0, 0, 0, 0.1)",
+        borderRadius: "4px",
+        border: "1px solid rgba(255, 255, 255, 0.05)",
+      }}
+    >
+      {items.length === 0 ? (
+        <div
+          className="bonsai-text"
+          style={{ color: "rgba(255, 255, 255, 0.5)", padding: "8px" }}
+        >
+          Empty array
+        </div>
+      ) : (
+        items.map((item, index) => (
+          <ArrayItem
+            key={index}
+            value={item}
+            path={`${path}[${index}]`}
+            onUpdate={onUpdate}
+          />
+        ))
+      )}
+    </div>
+  )
+);
+
+// Fun bonsai-themed messages
+const BONSAI_MESSAGES = [
+  "🌿 Your state is as well-trimmed as a bonsai tree!",
+  "🎋 Growing your app state, one branch at a time...",
+  "🍃 State changes are like leaves in the wind...",
+  "🌳 Your app is branching out beautifully!",
+  "🌱 New state sprouting...",
+  "🎍 Your code is as elegant as a bonsai!",
+  "🌿 State management, the zen way...",
+  "🍂 Fallen leaves (logs) tell a story...",
+];
+
+// Fun loading messages
+const LOADING_MESSAGES = [
+  "🌱 Watering the state tree...",
+  "🌿 Pruning unnecessary branches...",
+  "🎋 Growing new features...",
+  "🍃 Raking the state leaves...",
+  "🌳 Checking tree health...",
+];
+
 /**
  * DevPanel Component
  *
@@ -49,7 +431,7 @@ interface ButtonProps {
  * @component
  * @example
  * ```tsx
- * import { DevPanel } from '@bonsai/state';
+ * import { DevPanel } from '@bonsai-ts/state/devtools';
  *
  * function App() {
  *   return (
@@ -67,12 +449,44 @@ export function DevPanel() {
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [filter, setFilter] = React.useState("");
   const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
+  const [funMessage, setFunMessage] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  // Memoize filtered tree to prevent unnecessary recalculations
+  const filteredTree = useMemo(() => {
+    if (!filter) return tree;
+    const lowerFilter = filter.toLowerCase();
+    return Object.fromEntries(
+      Object.entries(tree).filter(([path]) =>
+        path.toLowerCase().includes(lowerFilter)
+      )
+    );
+  }, [tree, filter]);
+
+  // Memoize the update handler
+  const handleUpdate = useCallback((path: string, value: any) => {
+    set(path, value);
+  }, []);
+
+  // Rotate fun messages
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setFunMessage(
+        BONSAI_MESSAGES[Math.floor(Math.random() * BONSAI_MESSAGES.length)]
+      );
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   React.useEffect(() => {
+    // Simulate loading
+    const loadingInterval = setInterval(() => {
+      setIsLoading(false);
+    }, 1500);
+
     // Set up interval to fetch logs and update state tree
     const interval = setInterval(() => {
-      setLogs(getLogs());
-      // Get fresh state tree on each interval
+      setLogs([...getLogs()]);
       const rawTree = get("");
       const paths = getAllPaths(rawTree);
       const currentValues: Record<string, any> = {};
@@ -100,14 +514,21 @@ export function DevPanel() {
 
     return () => {
       clearInterval(interval);
+      clearInterval(loadingInterval);
       unsubs.forEach((unsub) => unsub());
     };
   }, []);
 
-  // Debug log to check what we're getting
-  //   console.log("Current tree state:", tree);
-
   const renderValueEditor = (path: string, value: any) => {
+    if (Array.isArray(value)) {
+      return <ArrayView items={value} path={path} onUpdate={handleUpdate} />;
+    }
+
+    // Handle objects (non-null)
+    if (typeof value === "object" && value !== null) {
+      return <ObjectView data={value} path={path} onUpdate={handleUpdate} />;
+    }
+
     const type = typeof value;
 
     // Handle null or undefined
@@ -178,37 +599,6 @@ export function DevPanel() {
       );
     }
 
-    // Handle objects and arrays
-    if (type === "object") {
-      const stringified = JSON.stringify(value, null, 2);
-      return (
-        <textarea
-          value={stringified}
-          onChange={(e) => {
-            try {
-              const parsed = JSON.parse(e.target.value);
-              set(path, parsed);
-            } catch {
-              // If JSON is invalid, just update the string value
-              set(path, e.target.value);
-            }
-          }}
-          style={{
-            width: "100%",
-            background: "rgba(255, 255, 255, 0.05)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-            color: "#fff",
-            fontSize: "13px",
-            padding: "8px",
-            borderRadius: "4px",
-            fontFamily: "monospace",
-            minHeight: "60px",
-            resize: "vertical",
-          }}
-        />
-      );
-    }
-
     // Handle string and other types
     return (
       <input
@@ -231,6 +621,69 @@ export function DevPanel() {
 
   return (
     <>
+      <style>
+        {`
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap');
+
+          .bonsai-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+          }
+          .bonsai-scrollbar::-webkit-scrollbar {
+            width: 8px;
+          }
+          .bonsai-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+          }
+          .bonsai-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+          }
+          .bonsai-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+          }
+          .bonsai-scrollbar-small {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+          }
+          .bonsai-scrollbar-small::-webkit-scrollbar {
+            width: 6px;
+          }
+          .bonsai-scrollbar-small::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+          }
+          .bonsai-scrollbar-small::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+          }
+          .bonsai-scrollbar-small::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+          }
+
+          /* Typography styles */
+          .bonsai-title {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+          }
+          .bonsai-subtitle {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+          }
+          .bonsai-text {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-weight: 400;
+          }
+          .bonsai-mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95em;
+          }
+        `}
+      </style>
+
       {/* Toggle Button */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
@@ -238,8 +691,8 @@ export function DevPanel() {
           position: "fixed",
           top: 20,
           right: 20,
-          width: "32px",
-          height: "32px",
+          width: "40px",
+          height: "40px",
           borderRadius: "50%",
           background: "rgba(17, 17, 17, 0.95)",
           border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -249,79 +702,107 @@ export function DevPanel() {
           justifyContent: "center",
           cursor: "pointer",
           zIndex: 10000,
-          fontSize: "16px",
-          transition: "all 0.2s ease",
+          fontSize: "20px",
+          transition: "all 0.3s ease",
           boxShadow: "0 4px 24px rgba(0, 0, 0, 0.2)",
+          transform: isCollapsed ? "rotate(0deg)" : "rotate(180deg)",
         }}
         onMouseOver={(e) => {
           e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+          e.currentTarget.style.transform = isCollapsed
+            ? "rotate(0deg) scale(1.1)"
+            : "rotate(180deg) scale(1.1)";
         }}
         onMouseOut={(e) => {
           e.currentTarget.style.background = "rgba(17, 17, 17, 0.95)";
+          e.currentTarget.style.transform = isCollapsed
+            ? "rotate(0deg)"
+            : "rotate(180deg)";
         }}
       >
-        {isCollapsed ? "🌿" : "❌"}
+        {isCollapsed ? "🌿" : "🎋"}
       </button>
 
       {/* Main Panel */}
       {!isCollapsed && (
         <div
+          className="bonsai-scrollbar"
           style={{
             position: "fixed",
             top: 20,
-            right: 60,
-            width: 360,
+            right: 70,
+            width: 380,
             maxHeight: "85vh",
             overflowY: "auto",
             background: "rgba(17, 17, 17, 0.95)",
             backdropFilter: "blur(10px)",
             color: "#fff",
-            fontFamily: "system-ui, -apple-system, sans-serif",
-            padding: "16px",
-            borderRadius: "12px",
-            boxShadow: "0 4px 24px rgba(0, 0, 0, 0.2)",
+            fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+            padding: "20px",
+            borderRadius: "16px",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
             zIndex: 9999,
             border: "1px solid rgba(255, 255, 255, 0.1)",
             transition: "all 0.3s ease",
           }}
         >
+          {/* Header */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "8px",
-              marginBottom: "20px",
-              paddingBottom: "12px",
+              gap: "12px",
+              marginBottom: "24px",
+              paddingBottom: "16px",
               borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
             }}
           >
-            <span style={{ fontSize: "20px" }}>🌿</span>
-            <h3
-              style={{
-                margin: 0,
-                fontSize: "16px",
-                fontWeight: "500",
-                color: "#fff",
-              }}
-            >
-              Bonsai Dev Panel
-            </h3>
+            <span style={{ fontSize: "24px" }}>🌿</span>
+            <div>
+              <h3
+                className="bonsai-title"
+                style={{
+                  margin: 0,
+                  fontSize: "18px",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                Bonsai Dev Panel
+                <span style={{ fontSize: "14px", opacity: 0.7 }}>v1.0.0</span>
+              </h3>
+              <p
+                className="bonsai-text"
+                style={{
+                  margin: "4px 0 0 0",
+                  fontSize: "13px",
+                  color: "rgba(255, 255, 255, 0.6)",
+                }}
+              >
+                {funMessage}
+              </p>
+            </div>
           </div>
 
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+            style={{ display: "flex", flexDirection: "column", gap: "24px" }}
           >
             {/* State Tree Section */}
             <div>
               <h4
+                className="bonsai-subtitle"
                 style={{
-                  margin: "0 0 12px 0",
-                  fontSize: "14px",
-                  color: "rgba(255, 255, 255, 0.7)",
-                  fontWeight: "500",
+                  margin: "0 0 16px 0",
+                  fontSize: "15px",
+                  color: "rgba(255, 255, 255, 0.8)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
                 }}
               >
-                State Tree
+                <span>🌳</span> State Tree
               </h4>
               <div
                 style={{
@@ -330,25 +811,21 @@ export function DevPanel() {
                   gap: "12px",
                 }}
               >
-                <div
-                  style={{
-                    position: "relative",
-                    marginBottom: "12px",
-                  }}
-                >
+                <div style={{ position: "relative", marginBottom: "16px" }}>
                   <input
                     placeholder="Search state paths..."
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
+                    className="bonsai-text"
                     style={{
                       width: "85%",
                       background: "rgba(255, 255, 255, 0.05)",
                       border: "1px solid rgba(255, 255, 255, 0.1)",
                       color: "#fff",
-                      fontSize: "13px",
-                      padding: "8px 12px",
-                      paddingLeft: "32px",
-                      borderRadius: "6px",
+                      fontSize: "14px",
+                      padding: "10px 16px",
+                      paddingLeft: "40px",
+                      borderRadius: "8px",
                       fontFamily: "inherit",
                       transition: "all 0.2s ease",
                     }}
@@ -356,104 +833,187 @@ export function DevPanel() {
                   <span
                     style={{
                       position: "absolute",
-                      left: "10px",
+                      left: "14px",
                       top: "50%",
                       transform: "translateY(-50%)",
                       color: "rgba(255, 255, 255, 0.5)",
-                      fontSize: "14px",
+                      fontSize: "16px",
                     }}
                   >
                     🔍
                   </span>
                 </div>
-                {Object.entries(tree).length > 0 ? (
-                  Object.entries(tree)
-                    .filter(([path]) =>
-                      path.toLowerCase().includes(filter.toLowerCase())
-                    )
-                    .map(([path, value]) => (
+
+                {isLoading ? (
+                  <div
+                    className="bonsai-text"
+                    style={{
+                      padding: "20px",
+                      textAlign: "center",
+                      color: "rgba(255, 255, 255, 0.6)",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {
+                      LOADING_MESSAGES[
+                        Math.floor(Math.random() * LOADING_MESSAGES.length)
+                      ]
+                    }
+                  </div>
+                ) : Object.entries(filteredTree).length > 0 ? (
+                  Object.entries(filteredTree).map(([path, value]) => (
+                    <div
+                      key={path}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                        padding: "12px",
+                        background:
+                          selectedPath === path
+                            ? "rgba(255, 255, 255, 0.1)"
+                            : "rgba(255, 255, 255, 0.03)",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        border: "1px solid rgba(255, 255, 255, 0.05)",
+                      }}
+                      onClick={() =>
+                        setSelectedPath(path === selectedPath ? null : path)
+                      }
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background =
+                          "rgba(255, 255, 255, 0.08)";
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background =
+                          selectedPath === path
+                            ? "rgba(255, 255, 255, 0.1)"
+                            : "rgba(255, 255, 255, 0.03)";
+                      }}
+                    >
                       <div
-                        key={path}
                         style={{
                           display: "flex",
-                          flexDirection: "column",
-                          gap: "6px",
-                          padding: "8px",
-                          background:
-                            selectedPath === path
-                              ? "rgba(255, 255, 255, 0.1)"
-                              : "rgba(255, 255, 255, 0.03)",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                          transition: "all 0.2s ease",
+                          alignItems: "center",
+                          gap: "12px",
                         }}
-                        onClick={() =>
-                          setSelectedPath(path === selectedPath ? null : path)
-                        }
                       >
-                        <div
+                        <label
+                          className="bonsai-mono"
                           style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
+                            fontSize: "13px",
+                            color: "rgba(255, 255, 255, 0.8)",
+                            fontWeight: "500",
+                            letterSpacing: "0.3px",
+                            flex: "1",
+                            minWidth: 0,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          <label
-                            style={{
-                              fontSize: "12px",
-                              color: "rgba(255, 255, 255, 0.7)",
-                              fontWeight: "500",
-                              letterSpacing: "0.3px",
-                              flex: "1",
-                              minWidth: 0,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {path}
-                          </label>
-                          {renderValueEditor(path, value)}
-                        </div>
-                        {selectedPath === path && (
+                          {path}
+                        </label>
+                        {renderValueEditor(path, value)}
+                      </div>
+                      {selectedPath === path && (
+                        <div
+                          className="bonsai-mono"
+                          style={{
+                            marginTop: "8px",
+                            padding: "12px",
+                            background: "rgba(0, 0, 0, 0.2)",
+                            borderRadius: "6px",
+                            fontSize: "13px",
+                            border: "1px solid rgba(255, 255, 255, 0.05)",
+                            maxHeight: "300px",
+                            overflowY: "auto",
+                          }}
+                        >
                           <div
                             style={{
-                              marginTop: "8px",
-                              padding: "8px",
-                              background: "rgba(0, 0, 0, 0.2)",
-                              borderRadius: "4px",
+                              color: "rgba(255, 255, 255, 0.6)",
+                              marginBottom: "8px",
                               fontSize: "12px",
-                              fontFamily: "monospace",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
                             }}
                           >
-                            <div style={{ color: "rgba(255, 255, 255, 0.5)" }}>
-                              Type: {typeof value}
-                            </div>
-                            {typeof value === "object" && (
-                              <div
-                                style={{
-                                  marginTop: "4px",
-                                  color: "rgba(255, 255, 255, 0.7)",
-                                }}
-                              >
-                                {JSON.stringify(value, null, 2)}
-                              </div>
+                            <span>
+                              Type:{" "}
+                              <strong>
+                                {Array.isArray(value) ? "array" : typeof value}
+                              </strong>
+                            </span>
+                            {Array.isArray(value) && (
+                              <span>
+                                Length: <strong>{value.length}</strong>
+                              </span>
                             )}
                           </div>
-                        )}
-                      </div>
-                    ))
+
+                          {Array.isArray(value) ? (
+                            <ArrayView
+                              items={value}
+                              path={path}
+                              onUpdate={handleUpdate}
+                            />
+                          ) : typeof value === "object" && value !== null ? (
+                            <pre
+                              style={{
+                                margin: 0,
+                                whiteSpace: "pre-wrap",
+                                wordBreak: "break-word",
+                                fontSize: "12px",
+                                lineHeight: "1.4",
+                                color: "rgba(255, 255, 255, 0.8)",
+                              }}
+                            >
+                              {JSON.stringify(value, null, 2)}
+                            </pre>
+                          ) : (
+                            <div
+                              style={{
+                                padding: "8px",
+                                background: "rgba(0, 0, 0, 0.1)",
+                                borderRadius: "4px",
+                                fontFamily: "monospace",
+                                fontSize: "13px",
+                                color:
+                                  typeof value === "string"
+                                    ? "#4CAF50"
+                                    : typeof value === "number"
+                                    ? "#2196F3"
+                                    : typeof value === "boolean"
+                                    ? "#FF9800"
+                                    : "#fff",
+                              }}
+                            >
+                              {String(value)}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))
                 ) : (
                   <div
+                    className="bonsai-text"
                     style={{
                       color: "rgba(255, 255, 255, 0.5)",
-                      fontSize: "13px",
-                      padding: "8px 0",
+                      fontSize: "14px",
+                      padding: "20px",
+                      textAlign: "center",
+                      background: "rgba(255, 255, 255, 0.03)",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(255, 255, 255, 0.05)",
                     }}
                   >
                     {filter
-                      ? "No matching paths found..."
-                      : "No state paths available yet..."}
+                      ? "🌿 No matching paths found..."
+                      : "🌱 No state paths available yet..."}
                   </div>
                 )}
               </div>
@@ -462,25 +1022,29 @@ export function DevPanel() {
             {/* Logs Section */}
             <div>
               <h4
+                className="bonsai-subtitle"
                 style={{
-                  margin: "0 0 12px 0",
-                  fontSize: "14px",
-                  color: "rgba(255, 255, 255, 0.7)",
-                  fontWeight: "500",
+                  margin: "0 0 16px 0",
+                  fontSize: "15px",
+                  color: "rgba(255, 255, 255, 0.8)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
                 }}
               >
-                Logs
+                <span>📜</span> Logs
               </h4>
               <div
+                className="bonsai-scrollbar-small bonsai-mono"
                 style={{
                   background: "rgba(0, 0, 0, 0.2)",
-                  borderRadius: "6px",
-                  padding: "12px",
+                  borderRadius: "8px",
+                  padding: "16px",
                   maxHeight: "200px",
                   overflowY: "auto",
-                  fontSize: "12px",
-                  fontFamily: "monospace",
+                  fontSize: "13px",
                   lineHeight: "1.5",
+                  border: "1px solid rgba(255, 255, 255, 0.05)",
                 }}
               >
                 {logs.length ? (
@@ -489,15 +1053,24 @@ export function DevPanel() {
                       key={i}
                       style={{
                         color: "rgba(255, 255, 255, 0.8)",
-                        marginBottom: "4px",
+                        marginBottom: "8px",
+                        padding: "4px 0",
+                        borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
                       }}
                     >
                       {log}
                     </div>
                   ))
                 ) : (
-                  <div style={{ color: "rgba(255, 255, 255, 0.5)" }}>
-                    No logs yet...
+                  <div
+                    className="bonsai-text"
+                    style={{
+                      color: "rgba(255, 255, 255, 0.5)",
+                      textAlign: "center",
+                      padding: "20px 0",
+                    }}
+                  >
+                    🌿 No logs yet... Your bonsai is still growing!
                   </div>
                 )}
               </div>
