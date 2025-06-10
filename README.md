@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0.0-blue)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.2.0-blue)](https://reactjs.org/)
+[![React](https://img.shields.io/badge/React-19.0.0-blue)](https://reactjs.org/)
 [![Bundle Size](https://img.shields.io/badge/Bundle%20Size-7KB%20gzipped-green)](https://img.shields.io/badge/Bundle%20Size-7KB%20gzipped-green)
 
 A flexible and lightweight state management library for React applications, featuring tree and flat state support, middleware system, and powerful dev tools.
@@ -105,7 +105,11 @@ function UserProfile() {
 ### DevTools (Optional)
 
 ```tsx
+/* in coming updates you would be able to do something like this 
 import { DevPanel } from "@bonsai-ts/state/devtools";
+*/
+
+import { DevPanel } from "@bonsai-ts/state
 
 function App() {
   return (
