@@ -20,8 +20,8 @@ const createBrandedMiddleware = <T extends StateValue>(
   fn: (
     path: string,
     nextValue: T,
-    prevValue: T
-  ) => T | false | Promise<T | false>
+    prevValue: T,
+  ) => T | false | Promise<T | false>,
 ): Middleware<T> => {
   const middleware = fn as Middleware<T>;
   middleware.__brand = Symbol("Middleware") as any;
@@ -34,7 +34,7 @@ const createBrandedMiddleware = <T extends StateValue>(
  * @returns A middleware function that can be used with the state system
  */
 export const createAsyncMiddleware = <T extends StateValue>(
-  handler: (path: string, nextValue: T, prevValue: T) => Promise<T | false>
+  handler: (path: string, nextValue: T, prevValue: T) => Promise<T | false>,
 ): Middleware<T> => {
   return createBrandedMiddleware(
     async (path: string, nextValue: T, prevValue: T) => {
@@ -43,7 +43,7 @@ export const createAsyncMiddleware = <T extends StateValue>(
       } catch (error) {
         return handleMiddlewareError(path, error);
       }
-    }
+    },
   );
 };
 
@@ -53,7 +53,7 @@ export const createAsyncMiddleware = <T extends StateValue>(
  * @returns A middleware function that validates updates
  */
 export const createValidationMiddleware = <T extends StateValue>(
-  validator: (path: string, nextValue: T, prevValue: T) => boolean | string
+  validator: (path: string, nextValue: T, prevValue: T) => boolean | string,
 ): Middleware<T> => {
   return createBrandedMiddleware((path: string, nextValue: T, prevValue: T) => {
     const result = validator(path, nextValue, prevValue);
@@ -74,7 +74,7 @@ export const createLoggingMiddleware = <T extends StateValue>(
     readonly logPath?: boolean;
     readonly logValue?: boolean;
     readonly logPrevValue?: boolean;
-  } = {}
+  } = {},
 ): Middleware<T> => {
   if (process.env.NODE_ENV === "production") {
     return createBrandedMiddleware((_, nextValue) => nextValue);
@@ -97,7 +97,7 @@ export const createLoggingMiddleware = <T extends StateValue>(
  * @param delay Delay in milliseconds
  */
 export const createDebounceMiddleware = <T extends StateValue>(
-  delay: number
+  delay: number,
 ): Middleware<T> => {
   const timeouts = new Map<string, NodeJS.Timeout>();
 
@@ -123,7 +123,7 @@ export const createDebounceMiddleware = <T extends StateValue>(
  * @param limit Maximum number of updates per second
  */
 export const createThrottleMiddleware = <T extends StateValue>(
-  limit: number
+  limit: number,
 ): Middleware<T> => {
   const lastUpdates = new Map<string, number>();
   const interval = 1000 / limit;
@@ -146,11 +146,16 @@ export const createThrottleMiddleware = <T extends StateValue>(
  * @param key The localStorage key to use
  */
 export const createPersistenceMiddleware = <T extends StateValue>(
-  key: string
+  key: string,
 ): Middleware<T> => {
   return createBrandedMiddleware(async (path: string, nextValue: T) => {
     try {
-      localStorage.setItem(key, JSON.stringify(nextValue));
+      if (
+        typeof window !== "undefined" &&
+        typeof localStorage !== "undefined"
+      ) {
+        localStorage.setItem(key, JSON.stringify(nextValue));
+      }
     } catch (error) {
       handleMiddlewareError(path, error);
     }
@@ -163,7 +168,7 @@ export const createPersistenceMiddleware = <T extends StateValue>(
  * @param allowedHours Array of hours (0-23) when updates are allowed
  */
 export const createTimeWindowMiddleware = <T extends StateValue>(
-  allowedHours: readonly number[]
+  allowedHours: readonly number[],
 ): Middleware<T> => {
   return createBrandedMiddleware((path: string, nextValue: T, prevValue: T) => {
     const currentHour = new Date().getHours();
