@@ -90,7 +90,7 @@ const ObjectItem = memo(
           margin: "2px 0",
           background: "rgba(0, 0, 0, 0.1)",
           borderRadius: "4px",
-          borderLeft: `2px solid ${typeColor}`,
+          borderLeft: `1px solid ${typeColor}`,
           fontSize: "13px",
           display: "flex",
           flexDirection: "column",
@@ -452,6 +452,38 @@ export function DevPanel() {
   const [funMessage, setFunMessage] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
 
+  // UI/UX enhancements
+  const [activeTab, setActiveTab] = React.useState<
+    "state" | "inspector" | "logs" | "settings"
+  >("state");
+  const [panelTop, setPanelTop] = React.useState<number>(20);
+  const [panelRight, setPanelRight] = React.useState<number>(70);
+  const [panelWidth, setPanelWidth] = React.useState<number>(420);
+  const [panelHeight, setPanelHeight] = React.useState<number>(600);
+  const [isDragging, setIsDragging] = React.useState<boolean>(false);
+  const dragOffset = React.useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isResizing, setIsResizing] = React.useState<boolean>(false);
+  const resizeStart = React.useRef<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  }>({ x: 0, y: 0, w: 0, h: 0 });
+  const [accent, setAccent] = React.useState<string>("#34d399"); // teal
+  const [pollMs, setPollMs] = React.useState<number>(500);
+  const [paused, setPaused] = React.useState<boolean>(false);
+  const [copiedKey, setCopiedKey] = React.useState<string | null>(null);
+
+  const handleCopy = React.useCallback((key: string, text: string) => {
+    try {
+      navigator.clipboard?.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1200);
+    } catch {
+      // ignore clipboard errors
+    }
+  }, []);
+
   // Memoize filtered tree to prevent unnecessary recalculations
   const filteredTree = useMemo(() => {
     if (!filter) return tree;
@@ -480,44 +512,106 @@ export function DevPanel() {
 
   React.useEffect(() => {
     // Simulate loading
-    const loadingInterval = setInterval(() => {
-      setIsLoading(false);
-    }, 1500);
+    const loadingTimer = setTimeout(() => setIsLoading(false), 800);
 
-    // Set up interval to fetch logs and update state tree
-    const interval = setInterval(() => {
-      setLogs([...getLogs()]);
-      const rawTree = get("");
-      const paths = getAllPaths(rawTree);
-      const currentValues: Record<string, any> = {};
-      paths.forEach((path) => {
-        currentValues[path] = get(path);
-      });
-      setTree(currentValues);
-    }, 500);
-
-    // Initial state setup
+    // Initial state snapshot
     const rawTree = get("");
     const paths = getAllPaths(rawTree);
     const initialValues: Record<string, any> = {};
-    paths.forEach((path) => {
-      initialValues[path] = get(path);
+    paths.forEach((p) => {
+      initialValues[p] = get(p);
     });
     setTree(initialValues);
 
-    // Subscribe to all paths
-    const unsubs = paths.map((path) =>
-      subscribe(path, (val) => {
-        setTree((prev) => ({ ...prev, [path]: val }));
+    // Live polling (fallback in addition to subscriptions)
+    const poll = setInterval(() => {
+      if (paused) return;
+      setLogs([...getLogs()]);
+      const root = get("");
+      const currentPaths = getAllPaths(root);
+      const currentValues: Record<string, any> = {};
+      currentPaths.forEach((p) => {
+        currentValues[p] = get(p);
+      });
+      setTree(currentValues);
+    }, pollMs);
+
+    // Subscriptions
+    const unsubs = paths.map((p) =>
+      subscribe(p, (val) => {
+        if (paused) return;
+        setTree((prev) => ({ ...prev, [p]: val }));
       })
     );
 
     return () => {
-      clearInterval(interval);
-      clearInterval(loadingInterval);
-      unsubs.forEach((unsub) => unsub());
+      clearInterval(poll);
+      clearTimeout(loadingTimer);
+      unsubs.forEach((u) => u());
     };
+  }, [pollMs, paused]);
+
+  // Hotkey: Ctrl+Shift+B to toggle
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "b"
+      ) {
+        setIsCollapsed((c) => !c);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Drag handlers (on header)
+  const onDragStart = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragOffset.current = { x: e.clientX, y: e.clientY };
+    e.preventDefault();
+  };
+  const onMouseMove = React.useCallback(
+    (e: MouseEvent) => {
+      if (isDragging) {
+        const dx = e.clientX - dragOffset.current.x;
+        const dy = e.clientY - dragOffset.current.y;
+        setPanelRight((r) => Math.max(0, r - dx));
+        setPanelTop((t) => Math.max(0, t + dy));
+        dragOffset.current = { x: e.clientX, y: e.clientY };
+      } else if (isResizing) {
+        const dx = e.clientX - resizeStart.current.x;
+        const dy = e.clientY - resizeStart.current.y;
+        setPanelWidth(() => Math.max(320, resizeStart.current.w - dx));
+        setPanelHeight(() => Math.max(360, resizeStart.current.h + dy));
+      }
+    },
+    [isDragging, isResizing]
+  );
+  const onMouseUp = React.useCallback(() => {
+    if (isDragging) setIsDragging(false);
+    if (isResizing) setIsResizing(false);
+  }, [isDragging, isResizing]);
+  React.useEffect(() => {
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [onMouseMove, onMouseUp]);
+
+  const onResizeStart = (e: React.MouseEvent) => {
+    setIsResizing(true);
+    resizeStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      w: panelWidth,
+      h: panelHeight,
+    };
+    e.preventDefault();
+  };
 
   const renderValueEditor = (path: string, value: any) => {
     if (Array.isArray(value)) {
@@ -729,96 +823,155 @@ export function DevPanel() {
           className="bonsai-scrollbar"
           style={{
             position: "fixed",
-            top: 20,
-            right: 70,
-            width: 380,
-            maxHeight: "85vh",
-            overflowY: "auto",
-            background: "rgba(17, 17, 17, 0.95)",
+            top: panelTop,
+            right: panelRight,
+            width: panelWidth,
+            height: panelHeight,
+            overflow: "hidden",
+            background: "rgba(17, 17, 17, 0.96)",
             backdropFilter: "blur(10px)",
             color: "#fff",
             fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-            padding: "20px",
             borderRadius: "16px",
-            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.35)",
             zIndex: 9999,
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-            transition: "all 0.3s ease",
+            border: `1px solid rgba(255, 255, 255, 0.08)`,
+            transition: "box-shadow 0.2s ease",
           }}
         >
-          {/* Header */}
+          {/* Header (draggable) */}
           <div
+            onMouseDown={onDragStart}
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "space-between",
               gap: "12px",
-              marginBottom: "24px",
-              paddingBottom: "16px",
-              borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+              padding: "12px 14px",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+              cursor: "move",
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0))",
             }}
           >
-            <span style={{ fontSize: "24px" }}>🌿</span>
-            <div>
-              <h3
-                className="bonsai-title"
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>🎋</span>
+              <div>
+                <div
+                  className="bonsai-title"
+                  style={{
+                    fontSize: 14,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  Bonsai DevTools
+                  <span style={{ fontSize: 11, opacity: 0.7 }}>v1.0.0</span>
+                </div>
+                <div
+                  className="bonsai-text"
+                  style={{ fontSize: 12, opacity: 0.7 }}
+                >
+                  {funMessage}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPaused((p) => !p);
+                }}
                 style={{
-                  margin: 0,
-                  fontSize: "18px",
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  border: `1px solid rgba(255,255,255,0.12)`,
+                  background: paused
+                    ? "rgba(255, 99, 71, 0.2)"
+                    : "rgba(255,255,255,0.06)",
                   color: "#fff",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
+                  cursor: "pointer",
                 }}
               >
-                Bonsai Dev Panel
-                <span style={{ fontSize: "14px", opacity: 0.7 }}>v1.0.0</span>
-              </h3>
-              <p
-                className="bonsai-text"
+                {paused ? "Resume" : "Pause"}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsCollapsed(true);
+                }}
+                title="Collapse (Ctrl+Shift+B)"
                 style={{
-                  margin: "4px 0 0 0",
-                  fontSize: "13px",
-                  color: "rgba(255, 255, 255, 0.6)",
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  border: `1px solid rgba(255,255,255,0.12)`,
+                  background: "rgba(255,255,255,0.06)",
+                  color: "#fff",
+                  cursor: "pointer",
                 }}
               >
-                {funMessage}
-              </p>
+                ✕
+              </button>
             </div>
           </div>
 
+          {/* Tabs */}
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "24px" }}
+            style={{
+              display: "flex",
+              gap: 6,
+              padding: "8px 10px",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
+            }}
           >
-            {/* State Tree Section */}
-            <div>
-              <h4
-                className="bonsai-subtitle"
+            {[
+              { id: "state", label: "State" },
+              { id: "inspector", label: "Inspector" },
+              { id: "logs", label: "Logs" },
+              { id: "settings", label: "Settings" },
+            ].map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id as any)}
                 style={{
-                  margin: "0 0 16px 0",
-                  fontSize: "15px",
-                  color: "rgba(255, 255, 255, 0.8)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  border: `1px solid ${
+                    activeTab === t.id ? accent : "rgba(255,255,255,0.12)"
+                  }`,
+                  background:
+                    activeTab === t.id
+                      ? "rgba(52, 211, 153, 0.16)"
+                      : "transparent",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontSize: 12,
                 }}
               >
-                <span>🌳</span> State Tree
-              </h4>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <div
+            className="bonsai-scrollbar"
+            style={{ padding: 12, height: panelHeight - 120, overflow: "auto" }}
+          >
+            {activeTab === "state" && (
               <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "12px",
-                }}
+                style={{ display: "flex", flexDirection: "column", gap: 12 }}
               >
-                <div style={{ position: "relative", marginBottom: "16px" }}>
+                <div style={{ position: "relative", marginBottom: 4 }}>
                   <input
                     placeholder="Search state paths..."
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                     className="bonsai-text"
                     style={{
-                      width: "85%",
+                      width: "80%",
                       background: "rgba(255, 255, 255, 0.05)",
                       border: "1px solid rgba(255, 255, 255, 0.1)",
                       color: "#fff",
@@ -848,10 +1001,10 @@ export function DevPanel() {
                   <div
                     className="bonsai-text"
                     style={{
-                      padding: "20px",
+                      padding: 20,
                       textAlign: "center",
-                      color: "rgba(255, 255, 255, 0.6)",
-                      fontSize: "14px",
+                      color: "rgba(255,255,255,0.6)",
+                      fontSize: 14,
                     }}
                   >
                     {
@@ -867,46 +1020,37 @@ export function DevPanel() {
                       style={{
                         display: "flex",
                         flexDirection: "column",
-                        gap: "8px",
-                        padding: "12px",
+                        gap: 8,
+                        padding: 12,
                         background:
                           selectedPath === path
-                            ? "rgba(255, 255, 255, 0.1)"
-                            : "rgba(255, 255, 255, 0.03)",
-                        borderRadius: "8px",
+                            ? "rgba(255,255,255,0.10)"
+                            : "rgba(255,255,255,0.03)",
+                        borderRadius: 8,
                         cursor: "pointer",
                         transition: "all 0.2s ease",
-                        border: "1px solid rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(255,255,255,0.05)",
+                        marginBottom: 12,
                       }}
                       onClick={() =>
                         setSelectedPath(path === selectedPath ? null : path)
                       }
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background =
-                          "rgba(255, 255, 255, 0.08)";
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background =
-                          selectedPath === path
-                            ? "rgba(255, 255, 255, 0.1)"
-                            : "rgba(255, 255, 255, 0.03)";
-                      }}
                     >
                       <div
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: "12px",
+                          gap: 12,
                         }}
                       >
                         <label
                           className="bonsai-mono"
                           style={{
-                            fontSize: "13px",
-                            color: "rgba(255, 255, 255, 0.8)",
-                            fontWeight: "500",
-                            letterSpacing: "0.3px",
-                            flex: "1",
+                            fontSize: 13,
+                            color: "rgba(255,255,255,0.85)",
+                            fontWeight: 500,
+                            letterSpacing: 0.3,
+                            flex: 1,
                             minWidth: 0,
                             overflow: "hidden",
                             textOverflow: "ellipsis",
@@ -915,27 +1059,64 @@ export function DevPanel() {
                         >
                           {path}
                         </label>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            try {
+                              navigator.clipboard?.writeText(path);
+                              (window as any).__bonsaiCopied = `path:${path}`;
+                              setTimeout(() => {
+                                if (
+                                  (window as any).__bonsaiCopied ===
+                                  `path:${path}`
+                                ) {
+                                  (window as any).__bonsaiCopied = null;
+                                }
+                              }, 1200);
+                            } catch {}
+                          }}
+                          title="Copy path"
+                          style={{
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            background:
+                              (window as any).__bonsaiCopied === `path:${path}`
+                                ? "rgba(52,211,153,0.2)"
+                                : "transparent",
+                            color:
+                              (window as any).__bonsaiCopied === `path:${path}`
+                                ? "#34d399"
+                                : "#fff",
+                            borderRadius: 6,
+                            padding: "4px 6px",
+                            fontSize: 12,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {(window as any).__bonsaiCopied === `path:${path}`
+                            ? "Copied!"
+                            : "Copy"}
+                        </button>
                         {renderValueEditor(path, value)}
                       </div>
                       {selectedPath === path && (
                         <div
                           className="bonsai-mono"
                           style={{
-                            marginTop: "8px",
-                            padding: "12px",
-                            background: "rgba(0, 0, 0, 0.2)",
-                            borderRadius: "6px",
-                            fontSize: "13px",
-                            border: "1px solid rgba(255, 255, 255, 0.05)",
-                            maxHeight: "300px",
+                            marginTop: 8,
+                            padding: 12,
+                            background: "rgba(0,0,0,0.2)",
+                            borderRadius: 6,
+                            fontSize: 13,
+                            border: "1px solid rgba(255,255,255,0.05)",
+                            maxHeight: 300,
                             overflowY: "auto",
                           }}
                         >
                           <div
                             style={{
-                              color: "rgba(255, 255, 255, 0.6)",
-                              marginBottom: "8px",
-                              fontSize: "12px",
+                              color: "rgba(255,255,255,0.65)",
+                              marginBottom: 8,
+                              fontSize: 12,
                               display: "flex",
                               justifyContent: "space-between",
                               alignItems: "center",
@@ -953,7 +1134,6 @@ export function DevPanel() {
                               </span>
                             )}
                           </div>
-
                           {Array.isArray(value) ? (
                             <ArrayView
                               items={value}
@@ -966,9 +1146,9 @@ export function DevPanel() {
                                 margin: 0,
                                 whiteSpace: "pre-wrap",
                                 wordBreak: "break-word",
-                                fontSize: "12px",
-                                lineHeight: "1.4",
-                                color: "rgba(255, 255, 255, 0.8)",
+                                fontSize: 12,
+                                lineHeight: 1.4,
+                                color: "rgba(255,255,255,0.85)",
                               }}
                             >
                               {JSON.stringify(value, null, 2)}
@@ -976,19 +1156,11 @@ export function DevPanel() {
                           ) : (
                             <div
                               style={{
-                                padding: "8px",
-                                background: "rgba(0, 0, 0, 0.1)",
-                                borderRadius: "4px",
+                                padding: 8,
+                                background: "rgba(0,0,0,0.1)",
+                                borderRadius: 4,
                                 fontFamily: "monospace",
-                                fontSize: "13px",
-                                color:
-                                  typeof value === "string"
-                                    ? "#4CAF50"
-                                    : typeof value === "number"
-                                    ? "#2196F3"
-                                    : typeof value === "boolean"
-                                    ? "#FF9800"
-                                    : "#fff",
+                                fontSize: 13,
                               }}
                             >
                               {String(value)}
@@ -1002,13 +1174,13 @@ export function DevPanel() {
                   <div
                     className="bonsai-text"
                     style={{
-                      color: "rgba(255, 255, 255, 0.5)",
-                      fontSize: "14px",
-                      padding: "20px",
+                      color: "rgba(255,255,255,0.5)",
+                      fontSize: 14,
+                      padding: 20,
                       textAlign: "center",
-                      background: "rgba(255, 255, 255, 0.03)",
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255, 255, 255, 0.05)",
+                      background: "rgba(255,255,255,0.03)",
+                      borderRadius: 8,
+                      border: "1px solid rgba(255,255,255,0.05)",
                     }}
                   >
                     {filter
@@ -1017,34 +1189,85 @@ export function DevPanel() {
                   </div>
                 )}
               </div>
-            </div>
+            )}
 
-            {/* Logs Section */}
-            <div>
-              <h4
-                className="bonsai-subtitle"
-                style={{
-                  margin: "0 0 16px 0",
-                  fontSize: "15px",
-                  color: "rgba(255, 255, 255, 0.8)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                }}
-              >
-                <span>📜</span> Logs
-              </h4>
+            {activeTab === "inspector" && (
+              <div>
+                <div
+                  className="bonsai-text"
+                  style={{
+                    marginBottom: 8,
+                    fontSize: 13,
+                    color: "rgba(255,255,255,0.8)",
+                  }}
+                >
+                  {selectedPath
+                    ? `Inspecting: ${selectedPath}`
+                    : "Select a path from the State tab."}
+                </div>
+                {selectedPath && (
+                  <div
+                    style={{
+                      padding: 12,
+                      background: "rgba(255,255,255,0.03)",
+                      borderRadius: 8,
+                      border: "1px solid rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    {renderValueEditor(selectedPath, tree[selectedPath])}
+                    <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                      <button
+                        onClick={() =>
+                          navigator.clipboard?.writeText(selectedPath)
+                        }
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 8,
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          background: "transparent",
+                          color: "#fff",
+                          cursor: "pointer",
+                          fontSize: 12,
+                        }}
+                      >
+                        Copy Path
+                      </button>
+                      <button
+                        onClick={() =>
+                          navigator.clipboard?.writeText(
+                            JSON.stringify(tree[selectedPath], null, 2)
+                          )
+                        }
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 8,
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          background: "transparent",
+                          color: "#fff",
+                          cursor: "pointer",
+                          fontSize: 12,
+                        }}
+                      >
+                        Copy Value
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "logs" && (
               <div
                 className="bonsai-scrollbar-small bonsai-mono"
                 style={{
-                  background: "rgba(0, 0, 0, 0.2)",
-                  borderRadius: "8px",
-                  padding: "16px",
-                  maxHeight: "200px",
+                  background: "rgba(0,0,0,0.2)",
+                  borderRadius: 8,
+                  padding: 12,
+                  maxHeight: panelHeight - 160,
                   overflowY: "auto",
-                  fontSize: "13px",
-                  lineHeight: "1.5",
-                  border: "1px solid rgba(255, 255, 255, 0.05)",
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  border: "1px solid rgba(255,255,255,0.05)",
                 }}
               >
                 {logs.length ? (
@@ -1052,10 +1275,10 @@ export function DevPanel() {
                     <div
                       key={i}
                       style={{
-                        color: "rgba(255, 255, 255, 0.8)",
-                        marginBottom: "8px",
+                        color: "rgba(255,255,255,0.85)",
+                        marginBottom: 8,
                         padding: "4px 0",
-                        borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                        borderBottom: "1px solid rgba(255,255,255,0.05)",
                       }}
                     >
                       {log}
@@ -1065,7 +1288,7 @@ export function DevPanel() {
                   <div
                     className="bonsai-text"
                     style={{
-                      color: "rgba(255, 255, 255, 0.5)",
+                      color: "rgba(255,255,255,0.5)",
                       textAlign: "center",
                       padding: "20px 0",
                     }}
@@ -1074,8 +1297,112 @@ export function DevPanel() {
                   </div>
                 )}
               </div>
-            </div>
+            )}
+
+            {activeTab === "settings" && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <div
+                    className="bonsai-subtitle"
+                    style={{
+                      marginBottom: 6,
+                      fontSize: 13,
+                      color: "rgba(255,255,255,0.85)",
+                    }}
+                  >
+                    Accent
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {[
+                      "#34d399",
+                      "#60a5fa",
+                      "#f59e0b",
+                      "#ef4444",
+                      "#a78bfa",
+                    ].map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setAccent(c)}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 6,
+                          border: `2px solid ${
+                            accent === c ? "#fff" : "rgba(255,255,255,0.2)"
+                          }`,
+                          background: c,
+                          cursor: "pointer",
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div
+                    className="bonsai-subtitle"
+                    style={{
+                      marginBottom: 6,
+                      fontSize: 13,
+                      color: "rgba(255,255,255,0.85)",
+                    }}
+                  >
+                    Polling (ms)
+                  </div>
+                  <input
+                    type="number"
+                    min={100}
+                    step={100}
+                    value={pollMs}
+                    onChange={(e) =>
+                      setPollMs(Math.max(100, Number(e.target.value) || 500))
+                    }
+                    style={{
+                      width: "100%",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      color: "#fff",
+                      borderRadius: 8,
+                      padding: "6px 8px",
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    marginTop: 6,
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.6)",
+                  }}
+                >
+                  Hotkey: Ctrl+Shift+B to toggle panel visibility
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Resize handle */}
+          <div
+            onMouseDown={onResizeStart}
+            title="Resize"
+            style={{
+              position: "absolute",
+              bottom: 8,
+              right: 8,
+              width: 14,
+              height: 14,
+              borderRight: `2px solid ${accent}`,
+              borderBottom: `2px solid ${accent}`,
+              borderRadius: 2,
+              cursor: "nwse-resize",
+              opacity: 0.8,
+            }}
+          />
         </div>
       )}
     </>

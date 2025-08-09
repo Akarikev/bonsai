@@ -79,3 +79,73 @@ export function createBonsaiStore<State extends Record<string, any>>() {
     use: useStore,
   };
 }
+
+// --- Tree-style store factory with options (devtools + middleware) ---
+import {
+  initTreeState,
+  get as treeGet,
+  set as treeSet,
+  subscribe as treeSubscribe,
+  addMiddleware as addTreeMiddleware,
+} from "./tree";
+import { useTreeBonsai } from "./usetreebonsai";
+import type { Middleware } from "./types";
+
+type KoaStyleMiddleware = (
+  next: (path: string, value: any) => any
+) => (path: string, value: any, prevValue?: any) => any;
+
+function adaptMiddleware(
+  fn: Middleware<any> | KoaStyleMiddleware
+): Middleware<any> {
+  // Heuristic: Koa-style middlewares are functions of arity 1 returning a function
+  if (typeof fn === "function" && fn.length === 1) {
+    const inner = (fn as KoaStyleMiddleware)((_path, value) => value);
+    return (path, nextValue, prevValue) => {
+      const result = inner(path, nextValue, prevValue);
+      return result === undefined ? nextValue : result;
+    };
+  }
+  return fn as Middleware<any>;
+}
+
+export interface CreateStoreOptions {
+  devtools?: boolean;
+  middleware?: Array<Middleware<any> | KoaStyleMiddleware>;
+}
+
+export function createStore<RootState extends Record<string, any>>(
+  initialState: RootState,
+  options: CreateStoreOptions = {}
+) {
+  // Initialize the global tree state with provided initial state and middleware
+  initTreeState({
+    initialState,
+    middleware: (options.middleware || []).map(adaptMiddleware),
+  });
+
+  // Optionally auto-mount DevTools panel
+  if (options.devtools) {
+    // Lazy import to avoid pulling devtools into production bundles unless enabled
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    import("../devtools/autoMount")
+      .then((m) => {
+        if (typeof window !== "undefined") {
+          m.mountDevtools();
+        }
+      })
+      .catch(() => {
+        // ignore mounting errors in non-browser environments
+      });
+  }
+
+  return {
+    get: (path: string) => treeGet(path),
+    set: (path: string, value: any) => treeSet(path, value),
+    subscribe: (path: string, cb: (value: any) => void) =>
+      treeSubscribe(path, cb),
+    use: <T = any>(path: string) => useTreeBonsai<T>(path),
+    addMiddleware: (mw: Middleware<any> | KoaStyleMiddleware) =>
+      addTreeMiddleware(adaptMiddleware(mw)),
+  } as const;
+}

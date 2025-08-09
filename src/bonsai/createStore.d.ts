@@ -46,3 +46,17 @@ export declare function createBonsaiStore<State extends Record<string, any>>(): 
     set: (partial: Partial<State>) => void;
     use: <T>(selector?: (state: State) => T) => T;
 };
+import type { Middleware } from "./types";
+type KoaStyleMiddleware = (next: (path: string, value: any) => any) => (path: string, value: any, prevValue?: any) => any;
+export interface CreateStoreOptions {
+    devtools?: boolean;
+    middleware?: Array<Middleware<any> | KoaStyleMiddleware>;
+}
+export declare function createStore<RootState extends Record<string, any>>(initialState: RootState, options?: CreateStoreOptions): {
+    readonly get: (path: string) => any;
+    readonly set: (path: string, value: any) => Promise<boolean>;
+    readonly subscribe: (path: string, cb: (value: any) => void) => () => void;
+    readonly use: <T = any>(path: string) => T;
+    readonly addMiddleware: (mw: Middleware<any> | KoaStyleMiddleware) => void;
+};
+export {};

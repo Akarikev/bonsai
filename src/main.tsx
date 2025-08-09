@@ -1,12 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { DevPanel } from "./devtools/dev-panel";
 
-import { useTreeMiddleware, initTreeState } from "./bonsai/tree";
 import { useBonsai, setState, addFlatMiddleware } from "./bonsai/flat";
-import { get, set, subscribe } from "./bonsai/tree";
-import { createBonsaiStore } from "./bonsai/createStore";
-import { useTreeBonsai } from "./bonsai/usetreebonsai";
+import { createBonsaiStore, createStore } from "./bonsai/createStore";
 import {
   createLoggingMiddleware,
   createValidationMiddleware,
@@ -16,11 +12,9 @@ import {
 
 import { addLog } from "./bonsai/devlog";
 
-// ─────────────── Initialize State and Middleware ───────────────
-
-// Initialize tree state with middleware
-initTreeState({
-  initialState: {
+// ─────────────── Initialize Tree Store (with DevTools + Middleware) ───────────────
+export const appStore = createStore(
+  {
     todos: [],
     filter: "all",
     user: {
@@ -31,27 +25,32 @@ initTreeState({
       },
     },
   },
-  middleware: [
-    createLoggingMiddleware({ logPath: true, logValue: true }),
-    createValidationMiddleware((path, value) => {
-      if (
-        path === "user/name" &&
-        typeof value === "string" &&
-        value.length < 2
-      ) {
-        addLog(`❌ Validation failed: Name must be at least 2 characters long`);
-        return "Name must be at least 2 characters long";
-      }
-      addLog(`✅ Validation passed for path: ${path}`);
-      return true;
-    }),
-    createDebounceMiddleware(300),
-    createPersistenceMiddleware("bonsai-playground"),
-  ],
-});
+  {
+    devtools: true,
+    middleware: [
+      createLoggingMiddleware({ logPath: true, logValue: true }),
+      createValidationMiddleware((path, value) => {
+        if (
+          path === "user/name" &&
+          typeof value === "string" &&
+          value.length < 2
+        ) {
+          addLog(
+            `❌ Validation failed: Name must be at least 2 characters long`
+          );
+          return "Name must be at least 2 characters long";
+        }
+        addLog(`✅ Validation passed for path: ${path}`);
+        return true;
+      }),
+      createDebounceMiddleware(300),
+      createPersistenceMiddleware("bonsai-playground"),
+    ],
+  }
+);
 
-// Add a global tree middleware for logging
-useTreeMiddleware((path, nextVal, oldVal) => {
+// Additional logging middleware (previously useTreeMiddleware)
+appStore.addMiddleware((path, nextVal, oldVal) => {
   addLog(
     `🌳 ${path} changed from ${JSON.stringify(oldVal)} to ${JSON.stringify(
       nextVal
@@ -70,10 +69,10 @@ const todoStatsStore = createBonsaiStore<{
 
 // Tree State Component
 function TodoList() {
-  const todos = useTreeBonsai<any[]>("todos") || [];
-  const filter = useTreeBonsai<string>("filter") || "all";
-  const name = useTreeBonsai<string>("user/name") || "";
-  const theme = useTreeBonsai<string>("user/preferences/theme") || "light";
+  const todos = appStore.use<any[]>("todos") || [];
+  const filter = appStore.use<string>("filter") || "all";
+  const name = appStore.use<string>("user/name") || "";
+  const theme = appStore.use<string>("user/preferences/theme") || "light";
 
   const filteredTodos = React.useMemo(() => {
     return todos.filter((todo: any) => {
@@ -89,7 +88,7 @@ function TodoList() {
       const newTodos = [...todos];
       newTodos[index] = { ...todo, completed: !todo.completed };
       addLog(`✅ Toggling todo completion: ${todo.text}`);
-      await set("todos", newTodos);
+      await appStore.set("todos", newTodos);
     },
     [todos]
   );
@@ -98,7 +97,7 @@ function TodoList() {
     async (index: number, todo: any) => {
       const newTodos = todos.filter((_: any, i: number) => i !== index);
       addLog(`🗑️ Deleting todo: ${todo.text}`);
-      await set("todos", newTodos);
+      await appStore.set("todos", newTodos);
     },
     [todos]
   );
@@ -113,7 +112,7 @@ function TodoList() {
         },
       ];
       addLog(`➕ Adding new todo: ${text}`);
-      await set("todos", newTodos);
+      await appStore.set("todos", newTodos);
     },
     [todos]
   );
@@ -131,7 +130,7 @@ function TodoList() {
         <button
           onClick={() => {
             addLog(`🔄 Changing filter to: all`);
-            set("filter", "all");
+            appStore.set("filter", "all");
           }}
         >
           All
@@ -139,7 +138,7 @@ function TodoList() {
         <button
           onClick={() => {
             addLog(`🔄 Changing filter to: active`);
-            set("filter", "active");
+            appStore.set("filter", "active");
           }}
         >
           Active
@@ -147,7 +146,7 @@ function TodoList() {
         <button
           onClick={() => {
             addLog(`🔄 Changing filter to: completed`);
-            set("filter", "completed");
+            appStore.set("filter", "completed");
           }}
         >
           Completed
@@ -194,7 +193,7 @@ function TodoList() {
           onClick={() => {
             const newTheme = theme === "light" ? "dark" : "light";
             addLog(`🎨 Switching theme to: ${newTheme}`);
-            set("user/preferences/theme", newTheme);
+            appStore.set("user/preferences/theme", newTheme);
           }}
         >
           Toggle Theme
@@ -218,7 +217,7 @@ function UserProfile() {
           value={name}
           onChange={(e) => {
             addLog(`👤 Updating name to: ${e.target.value}`);
-            set("user/name", e.target.value);
+            appStore.set("user/name", e.target.value);
             setState({ name: e.target.value });
           }}
         />
@@ -262,7 +261,7 @@ function TodoStats() {
 function App() {
   // Subscribe to todo changes to update stats
   React.useEffect(() => {
-    const unsubscribe = subscribe("todos", (todos) => {
+    const unsubscribe = appStore.subscribe("todos", (todos) => {
       if (!todos) return;
 
       const totalCompleted = todos.filter((todo: any) => todo.completed).length;
@@ -288,7 +287,6 @@ function App() {
       <TodoList />
       <UserProfile />
       <TodoStats />
-      <DevPanel />
     </div>
   );
 }

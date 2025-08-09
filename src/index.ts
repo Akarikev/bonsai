@@ -8,7 +8,7 @@ export * from "./bonsai/usetreebonsai";
 export * from "./bonsai/middleware";
 
 // DevTools
-export { DevPanel } from "./devtools";
+export { DevPanel, mountDevtools } from "./devtools";
 export * from "./bonsai/devlog";
 
 // Types
