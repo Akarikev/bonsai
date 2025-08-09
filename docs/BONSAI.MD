@@ -78,7 +78,34 @@ Bonsai is a modern state management toolkit for React (and beyond) that combines
 
 ## How to Use
 
-You can start with the flat state system for simple global state needs:
+### Recommended: createStore (tree state + options)
+
+```ts
+import { createStore, createLoggingMiddleware } from "@bonsai-ts/state";
+
+export const appStore = createStore(
+  {
+    count: 0,
+    user: { name: "", profile: { theme: "light" } },
+  },
+  {
+    devtools: true, // auto-mount floating DevTools in development
+    middleware: [createLoggingMiddleware({ logPath: true, logValue: true })],
+  }
+);
+
+// In a React component
+function Counter() {
+  const count = appStore.use<number>("count") || 0;
+  return (
+    <button onClick={() => appStore.set("count", count + 1)}>
+      Count: {count}
+    </button>
+  );
+}
+```
+
+You can still use the flat state system for simple global state needs:
 
 ```ts
 import { useBonsai, setState } from "@bonsai-ts/state";
@@ -94,7 +121,7 @@ function Counter() {
 }
 ```
 
-Or leverage the tree system for nested state:
+Or leverage the tree system for nested state (classic API):
 
 ```ts
 import { useTreeBonsai, set } from "@bonsai-ts/state";
@@ -111,7 +138,9 @@ function UserProfile() {
 }
 ```
 
-Add the Dev Panel to your app for debugging:
+### DevTools
+
+Auto-mount via `createStore(..., { devtools: true })` (recommended), or render the component manually:
 
 ```ts
 import { DevPanel } from "@bonsai-ts/state/devtools";

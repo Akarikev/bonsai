@@ -20,24 +20,24 @@ Bonsai is a flexible state management system that supports both flat and tree-ba
 
 ## Quick Start
 
-```typescript
-import { initTreeState, set, get } from "@bonsai-ts/state";
-import { createLoggingMiddleware } from "@bonsai-ts/state";
+### Recommended: createStore
 
-// Initialize with middleware
-initTreeState({
-  initialState: { user: { name: "", age: 0 } },
-  middleware: [createLoggingMiddleware()],
-});
+```typescript
+import { createStore, createLoggingMiddleware } from "@bonsai-ts/state";
+
+export const store = createStore(
+  { user: { name: "", age: 0 } },
+  { devtools: true, middleware: [createLoggingMiddleware()] }
+);
 
 // Use the state
-set("user/name", "John");
-const name = get("user/name");
+await store.set("user/name", "John");
+const name = store.get("user/name");
 ```
 
 ## State Management Patterns
 
-### Tree State
+### Tree State (classic API)
 
 Tree state is useful for nested data structures and path-based access:
 
@@ -107,7 +107,7 @@ function UserProfile() {
 
 ## Middleware System
 
-### Basic Middleware Usage
+### Basic Middleware Usage (classic API)
 
 ```typescript
 import { useTreeMiddleware } from "@bonsai-ts/state";
@@ -172,7 +172,7 @@ const timeWindow = createTimeWindowMiddleware([
 
 ## React Integration
 
-### Tree State Hook
+### Tree State Hook (classic API)
 
 ```typescript
 import { useTreeBonsai } from "@bonsai-ts/state";
@@ -210,7 +210,7 @@ function Counter() {
 
 ## Common Patterns
 
-### Form Handling with Validation
+### Form Handling with Validation (classic API)
 
 ```typescript
 initTreeState({
@@ -229,7 +229,7 @@ initTreeState({
 });
 ```
 
-### API Integration with Debouncing
+### API Integration with Debouncing (classic API)
 
 ```typescript
 const apiMiddleware = createAsyncMiddleware(async (path, nextValue) => {
@@ -266,9 +266,17 @@ initTreeState({
 
 ## DevTools Integration
 
-Bonsai includes a powerful development panel for debugging and monitoring state changes.
+Bonsai includes a powerful DevTools panel for debugging and monitoring state changes.
 
-### DevPanel Component
+### Recommended: Auto-mount via createStore
+
+```typescript
+import { createStore } from "@bonsai-ts/state";
+
+export const store = createStore({ user: { name: "" } }, { devtools: true });
+```
+
+### Manual: DevPanel Component
 
 ```typescript
 import { DevPanel } from "@bonsai-ts/state/devtools";

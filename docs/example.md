@@ -4,29 +4,20 @@ This document provides a comprehensive guide on how to use Bonsai State Manageme
 
 ## Use Cases
 
-### 1. Tree State Management
+### 1. Tree State Management (recommended with createStore)
 
 Tree state is ideal for managing nested data structures. Here's how you can use it:
 
 ```tsx
-import { initTreeState, useTreeBonsai, set } from "@bonsai-ts/state";
+import { createStore } from "@bonsai-ts/state";
 
-// Initialize tree state
-initTreeState({
-  initialState: {
-    user: {
-      name: "John",
-      preferences: {
-        theme: "light",
-        notifications: true,
-      },
-    },
-  },
+export const store = createStore({
+  user: { name: "John", preferences: { theme: "light", notifications: true } },
 });
 
 function UserProfile() {
-  const name = useTreeBonsai("user/name");
-  const theme = useTreeBonsai("user/preferences/theme");
+  const name = store.use<string>("user/name");
+  const theme = store.use<string>("user/preferences/theme");
 
   return (
     <div>
@@ -34,7 +25,10 @@ function UserProfile() {
       <p>Theme: {theme}</p>
       <button
         onClick={() =>
-          set("user/preferences/theme", theme === "light" ? "dark" : "light")
+          store.set(
+            "user/preferences/theme",
+            theme === "light" ? "dark" : "light"
+          )
         }
       >
         Toggle Theme
@@ -101,51 +95,36 @@ subscribe("todos", (todos) => {
 });
 ```
 
-### 4. Middleware Usage
+### 4. Middleware Usage (with createStore)
 
 Middleware can be used to add custom logic to state updates. Here's an example with validation and logging:
 
 ```tsx
 import {
-  initTreeState,
+  createStore,
   createValidationMiddleware,
   createLoggingMiddleware,
 } from "@bonsai-ts/state";
 
-// Validation middleware
-const userValidator = createValidationMiddleware<{
-  name: string;
-  age: number;
-}>((path, nextValue) => {
-  if (!nextValue.name || nextValue.name.length < 2) {
-    return "Name must be at least 2 characters long";
+const userValidator = createValidationMiddleware<{ name: string; age: number }>(
+  (path, nextValue) => {
+    if (!nextValue.name || nextValue.name.length < 2)
+      return "Name must be at least 2 characters long";
+    if (nextValue.age < 18) return "User must be at least 18 years old";
+    return true;
   }
-  if (nextValue.age < 18) {
-    return "User must be at least 18 years old";
-  }
-  return true;
-});
+);
 
-// Logging middleware
-const logger = createLoggingMiddleware<{
-  name: string;
-  age: number;
-}>({
+const logger = createLoggingMiddleware<{ name: string; age: number }>({
   logPath: true,
   logValue: true,
   logPrevValue: true,
 });
 
-// Initialize with middleware
-initTreeState({
-  initialState: {
-    user: {
-      name: "",
-      age: 0,
-    },
-  },
-  middleware: [userValidator, logger],
-});
+export const store = createStore(
+  { user: { name: "", age: 0 } },
+  { middleware: [userValidator, logger], devtools: true }
+);
 ```
 
 ## Benchmarks

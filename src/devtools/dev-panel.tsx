@@ -867,7 +867,7 @@ export function DevPanel() {
                   }}
                 >
                   Bonsai DevTools
-                  <span style={{ fontSize: 11, opacity: 0.7 }}>v1.0.0</span>
+                  <span style={{ fontSize: 11, opacity: 0.7 }}>v1.1.0</span>
                 </div>
                 <div
                   className="bonsai-text"

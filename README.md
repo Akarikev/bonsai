@@ -36,6 +36,8 @@ Bonsai offers a unique approach to state management:
 - **Hotkey**: Ctrl+Shift+B toggles the DevTools panel.
 - **Koa-style middleware adapter**: pass `(next) => (path, value, prev) => next(path, value)` directly.
 
+> Note: The classic API (`initTreeState`, `useTreeBonsai`, `set`, `get`, `subscribe`) is still available and supported. New projects are encouraged to use `createStore` for simpler setup and optional DevTools auto-mounting.
+
 ## Prerequisites
 
 - React >= 18.2.0
@@ -59,7 +61,32 @@ bun add @bonsai-ts/state
 
 ## Quick Start
 
-### Tree State
+### Recommended: createStore
+
+```tsx
+import { createStore } from "@bonsai-ts/state";
+
+// Initialize once with options (auto-mounts DevTools in dev when enabled)
+export const appStore = createStore(
+  {
+    count: 0,
+    user: { name: "elorm", isActive: true },
+  },
+  { devtools: true }
+);
+
+// Use in components
+function Counter() {
+  const count = appStore.use<number>("count") || 0;
+  return (
+    <button onClick={() => appStore.set("count", count + 1)}>
+      Increment ({count})
+    </button>
+  );
+}
+```
+
+### Tree State (classic API)
 
 ```tsx
 import { initTreeState, useTreeBonsai, set } from "@bonsai-ts/state";
@@ -269,7 +296,7 @@ subscribe("todos", (todos) => {
 });
 ```
 
-### Tree Store with DevTools and Middleware
+### Tree Store with DevTools and Middleware (createStore)
 
 ```tsx
 import { createStore, createLoggingMiddleware } from "@bonsai-ts/state";
@@ -705,6 +732,10 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 - [GitHub Issues](https://github.com/Akarikev/bonsai/issues)
 - [Documentation](docs/BONSAI.MD)
 - [Examples](docs/USEBONSAI.MD)
+
+## Changelog
+
+See `CHANGELOG.md` for release notes.
 
 ## Support
 
